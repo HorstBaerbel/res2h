@@ -1,0 +1,37 @@
+#include "res2h.h"
+
+#include "windows.h"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION RESOURCE_VERSION
+ PRODUCTVERSION RESOURCE_VERSION
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "Comments", "\0"
+            VALUE "FileDescription", "res2h resource compiler\0"
+            VALUE "FileVersion", RESOURCE_VERSION_STRING
+            VALUE "InternalName", "res2h.exe\0"
+            VALUE "LegalCopyright", "\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "res2h.exe\0"
+            VALUE "ProductName", "res2h\0"
+            VALUE "ProductVersion", RESOURCE_VERSION_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x407, 1200
+    END
+END
