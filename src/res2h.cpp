@@ -204,7 +204,8 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 			}
             //remove parent directory of file from path for internal name. This could surely be done in a safer way
             boost::filesystem::path subPath(filePath.generic_string().substr(parentDir.generic_string().size() + 1));
-            temp.internalName = subPath.generic_string();
+            //add a ":/" before the name to mark internal resources (Yes. Hello Qt!)
+            temp.internalName = ":/" + subPath.generic_string();
             //add subdir below parent path to name to enable multiple files with the same name
             std::string subDirString(subPath.remove_filename().generic_string());
             if (!subDirString.empty()) {
