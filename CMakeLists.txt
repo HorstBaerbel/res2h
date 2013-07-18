@@ -4,7 +4,7 @@ project(res2h)
 
 #finding necessary packages
 #-------------------------------------------------------------------------------
-find_package(Boost REQUIRED COMPONENTS filesystem)
+find_package(Boost REQUIRED COMPONENTS system filesystem)
 
 #-------------------------------------------------------------------------------
 #set up compiler flags and excutable names

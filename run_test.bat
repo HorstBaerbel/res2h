@@ -1,0 +1,1 @@
+./Debug/res2h.exe ./test ./result -s -h ./result/resources.h -u ./result/resources.cpp
