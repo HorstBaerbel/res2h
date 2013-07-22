@@ -96,13 +96,13 @@ void printVersion()
 void printUsage()
 {
     std::cout << std::endl;
-	std::cout << "Usage: res2h <infile/directory> <outfile/directory> [options]" << std::endl;
+	std::cout << "Usage: res2h <infile/indir> <outfile/outdir> [options]" << std::endl;
 	std::cout << "Valid options:" << std::endl;
-	std::cout << "-s Recurse into subdirectories." << std::endl;
+	std::cout << "-s Recurse into subdirectories below indir." << std::endl;
 	std::cout << "-c Use .c files and arrays for storing the data definitions, else" << std::endl << "    uses .cpp files and std::vector/std::map." << std::endl;
 	std::cout << "-h <headerfile> Puts all declarations in a common \"headerfile\" using \"extern\"" << std::endl << "    and includes that header file in the source files." << std::endl;
 	std::cout << "-u <sourcefile> Create utility functions and arrays in a .c/.cpp file." << std::endl << "    Only makes sense in combination with -h" << std::endl;
-    std::cout << "-b Compile binary file outfile containing all infile(s). For reading in your" << std::endl << "    software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs." << std::endl;
+    std::cout << "-b Compile binary archive outfile containing all infile(s). For reading in your" << std::endl << "    software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs." << std::endl;
 	std::cout << "-v Be verbose" << std::endl;
     std::cout << "Examples:" << std::endl;
     std::cout << "res2h ./lenna.png ./resources/lenna_png.cpp -c (convert single file)" << std::endl;
@@ -554,22 +554,21 @@ uint32_t calculateAdler32(const boost::filesystem::path & filePath, uint32_t adl
 }
 
 //Blob file format:
-//Offset    | Type     | Description
-//----------+----------+-------------------------------------------
-//START     | char[8]  | magic number string "res2hbin"
-//08        | uint32_t | file format version number (currently 1)
-//12        | uint32_t | format flags or other crap for file (currently 0)
-//16        | uint32_t | number of directory and file entries following
-//Directory:
-//00        | uint32_t | file entry #0, size of internal name INCLUDING null-terminating character
-//04        | char[]   | file entry #0, internal name (null-terminated)
-//04 + name | uint32_t | file entry #0, format flags for entry (currently 0)
-//08 + name | uint32_t | file entry #0, size of data
-//12 + name | uint32_t | file entry #0, absolute offset of data in file
-//...
-//data
-//...
-//END       | uint32_t | Adler-32 RFC1950 checksum of whole file up to this point
+//Offset         | Type     | Description
+//---------------+----------+-------------------------------------------
+//START          | char[8]  | magic number string "res2hbin"
+//08             | uint32_t | file format version number (currently 1)
+//12             | uint32_t | format flags or other crap for file (currently 0)
+//16             | uint32_t | number of directory and file entries following
+//Then follows the directory:
+//20 + 00        | uint32_t | file entry #0, size of internal name INCLUDING null-terminating character
+//20 + 04        | char[]   | file entry #0, internal name (null-terminated)
+//20 + 04 + name | uint32_t | file entry #0, format flags for entry (currently 0)
+//20 + 08 + name | uint32_t | file entry #0, size of data
+//20 + 12 + name | uint32_t | file entry #0, absolute offset of data in file
+//Then follow the other directory entries.
+//Directly after the directory the data blocks begin.
+//END - 04       | uint32_t | Adler-32 (RFC1950) checksum of whole file up to this point
 //Obviously this limits you to ~4GB for the whole binary file and ~4GB per data entry. Go cry about it...
 //There is some redundant information here, but that's for reading stuff faster.
 //Also the version and dummy fields might be needed in later versions...
