@@ -566,6 +566,7 @@ uint32_t calculateAdler32(const boost::filesystem::path & filePath, uint32_t adl
 //20 + 04 + name | uint32_t | file entry #0, format flags for entry (currently 0)
 //20 + 08 + name | uint32_t | file entry #0, size of data
 //20 + 12 + name | uint32_t | file entry #0, absolute offset of data in file
+//20 + 16 + name | uint32_t | file entry #0, Adler-32 (RFC1950) checksum of data
 //Then follow the other directory entries.
 //Directly after the directory the data blocks begin.
 //END - 04       | uint32_t | Adler-32 (RFC1950) checksum of whole file up to this point
@@ -615,6 +616,9 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 			outStream.write(reinterpret_cast<const char *>(&fdIt->size), sizeof(uint32_t));
 			//add offset from file start to start of data
 			outStream.write(reinterpret_cast<const char *>(&dataStart), sizeof(uint32_t));
+			//add checksum of data
+			const uint32_t checksum = calculateAdler32(fdIt->inPath);
+			outStream.write(reinterpret_cast<const char *>(&checksum), sizeof(uint32_t));
 			//now add size of this entrys data to start offset for next data block
 			dataStart += fdIt->size;
 			++fdIt;

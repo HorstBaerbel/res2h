@@ -178,6 +178,9 @@ Binary archive format
         <td>20 + 12 + name</td><td>uint32_t</td><td>file entry #0, absolute offset of data in file</td>
     </tr>
     <tr>
+        <td>20 + 16 + name</td><td>uint32_t</td><td>file entry #0, Adler-32 (RFC1950) checksum of data</td>
+    </tr>
+    <tr>
         <td colspan="3">Then follow the other directory entries</td>
     </tr>
     <tr>
