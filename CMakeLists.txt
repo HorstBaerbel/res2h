@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 2.6)
 
 project(res2h)
 
-#finding necessary packages
 #-------------------------------------------------------------------------------
+#finding necessary packages
+
 find_package(Boost REQUIRED COMPONENTS system filesystem)
 
 #-------------------------------------------------------------------------------
@@ -25,27 +26,32 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
     #set up compiler flags for GCC
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2") #support C++11 for std::, optimize
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")  #strip binary
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s") #strip binary
 endif()
 
 #-------------------------------------------------------------------------------
 #add include directories
+
 set(R2H_INCLUDE_DIRS
     ${Boost_INCLUDE_DIRS}
 )
 
 #-------------------------------------------------------------------------------
 #define basic sources and headers
+
 set(R2H_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.hpp
 )
 
 set(R2H_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
 )
 
 #-------------------------------------------------------------------------------
 #define OS specific sources and headers
+
 if(MSVC)
     LIST(APPEND R2H_SOURCES
 		${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.rc
@@ -54,6 +60,7 @@ endif()
 
 #-------------------------------------------------------------------------------
 #define libraries and directories
+
 link_directories(
     ${Boost_LIBRARY_DIRS}
 )
@@ -64,16 +71,19 @@ set(R2H_LIBRARIES
 
 #-------------------------------------------------------------------------------
 #set up build directories
+
 set(dir ${CMAKE_CURRENT_SOURCE_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${dir} CACHE PATH "Build directory" FORCE)
 set(LIBRARY_OUTPUT_PATH ${dir} CACHE PATH "Build directory" FORCE)
 
 #-------------------------------------------------------------------------------
 #define target
+
 include_directories(${R2H_INCLUDE_DIRS})
 add_executable(res2h ${R2H_SOURCES} ${R2H_HEADERS})
 target_link_libraries(res2h ${R2H_LIBRARIES})
 
+#-------------------------------------------------------------------------------
 #special properties for windows builds
 if(MSVC)
     #create console application
