@@ -16,6 +16,7 @@ struct FileData {
 	size_t size;
 };
 
+bool beVerbose = false;
 bool useRecursion = false;
 bool useC = false;
 bool createBinary = false;
@@ -26,8 +27,9 @@ boost::filesystem::path outFilePath;
 
 //-----------------------------------------------------------------------------
 
-//This is from: https://svn.boost.org/trac/boost/ticket/1976
-//The function still seems to be missing in boost as of 1.53.0
+//This is based on the example code found here: https://svn.boost.org/trac/boost/ticket/1976
+//but changed to not return a trailing ".." when paths only differ in their file name.
+//The function still seems to be missing in boost as of 1.54.0.
 boost::filesystem::path naiveUncomplete(boost::filesystem::path const path, boost::filesystem::path const base)
 {
     if (path.has_root_path()) {
@@ -101,6 +103,7 @@ void printUsage()
 	std::cout << "-h <headerfile> Puts all declarations in a common \"headerfile\" using \"extern\"" << std::endl << "    and includes that header file in the source files." << std::endl;
 	std::cout << "-u <sourcefile> Create utility functions and arrays in a .c/.cpp file." << std::endl << "    Only makes sense in combination with -h" << std::endl;
     std::cout << "-b Compile binary file outfile containing all infile(s). For reading in your" << std::endl << "    software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs." << std::endl;
+	std::cout << "-v Be verbose" << std::endl;
     std::cout << "Examples:" << std::endl;
     std::cout << "res2h ./lenna.png ./resources/lenna_png.cpp -c (convert single file)" << std::endl;
     std::cout << "res2h ./data ./resources -s -h resources.h -u resources.cpp (convert directory)" << std::endl;
@@ -128,6 +131,10 @@ bool readArguments(int argc, const char * argv[])
 		}
         else if (argument == "-s") {
 			useRecursion = true;
+			pastFiles = true;
+		}
+        else if (argument == "-v") {
+			beVerbose = true;
 			pastFiles = true;
 		}
 		else if (argument == "-h") {
@@ -169,6 +176,7 @@ bool readArguments(int argc, const char * argv[])
 			}
 			pastFiles = true;
 		}
+		//none of the options was matched until here...
 		else if (!pastFiles) {
 			//if no files/directories have been found yet this is probably a file/directory
 			if (inFilePath.empty()) {
@@ -201,7 +209,7 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 	if(boost::filesystem::is_symlink(inPath)) {
 		//check if the symlink points somewhere in the path. this would recurse
 		if(inPath.string().find(boost::filesystem::canonical(inPath).string()) == 0) {
-			std::cout << "Warning: Path \"" << inPath.string() << "\" contains recursive symlink! Skipping." << std::endl;
+			std::cout << "Warning: Path " << inPath << " contains recursive symlink! Skipping." << std::endl;
 			return files;
 		}
 	}
@@ -211,6 +219,9 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 	while (fileIt != dirEnd) {
 		boost::filesystem::path filePath = (*fileIt).path();
 		if (!boost::filesystem::is_directory(filePath)) {
+			if (beVerbose) {
+				std::cout << "Found input file " << filePath << std::endl;
+			}
 			//add file to list
 			FileData temp;
 			temp.inPath = filePath;
@@ -237,12 +248,19 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
             }
             //build new output file name
             temp.outPath = outPath / newFileName;
+			if (beVerbose) {
+				std::cout << "Internal name will be \"" << temp.internalName << "\"" << std::endl;
+				std::cout << "Output path is " << temp.outPath << std::endl;
+			}
 			//get file size
 			try {
 				temp.size = (size_t)boost::filesystem::file_size(filePath);
+				if (beVerbose) {
+					std::cout << "Size is " << temp.size << " bytes." << std::endl;
+				}
 			}
 			catch(...) {
-				std::cout << "Error: Failed to get size of \"" << filePath.string() << "\"!" << std::endl;
+				std::cout << "Error: Failed to get size of " << filePath << "!" << std::endl;
 				temp.size = 0;
 			}
 			//add file to list
@@ -257,6 +275,9 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 		while (dirIt != dirEnd) {
 			boost::filesystem::path dirPath = (*dirIt).path();
 			if (boost::filesystem::is_directory(dirPath)) {
+				if (beVerbose) {
+					std::cout << "Found subdirectory " << dirPath << std::endl;
+				}
 				//subdirectory found. recurse.
 				std::vector<FileData> subFiles = getFileDataFrom(dirPath, outPath, parentDir, recurse);
 				//add returned result to file list
@@ -276,6 +297,9 @@ bool convertFile(FileData & fileData, const boost::filesystem::path & commonHead
 		std::ifstream inStream;
 		inStream.open(fileData.inPath.string(), std::ifstream::in | std::ifstream::binary);
 		if (inStream.is_open() && inStream.good()) {
+			if (beVerbose) {
+				std::cout << "Converting input file " << fileData.inPath;
+			}
 			//try getting size of data
 			inStream.seekg(0, std::ios::end);
 			fileData.size = (size_t)inStream.tellg();
@@ -323,6 +347,9 @@ bool convertFile(FileData & fileData, const boost::filesystem::path & commonHead
 				//close files
 				outStream.close();
 				inStream.close();
+				if (beVerbose) {
+					std::cout << " - succeeded." << std::endl;
+				}
 				return true;
 			}
 			else {
@@ -347,6 +374,9 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const boost::fil
 	std::ofstream outStream;
     outStream.open(commonHeaderPath.generic_string(), std::ofstream::out | std::ofstream::trunc);
 	if (outStream.is_open() && outStream.good()) {
+		if (beVerbose) {
+			std::cout << "Creating common header " << commonHeaderPath;
+		}
 		//add message
 		outStream << "//this file was auto-generated by res2h" << std::endl << std::endl;
 		//add #pragma to only include once
@@ -384,6 +414,9 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const boost::fil
 		}
 		//close file
 		outStream.close();
+		if (beVerbose) {
+			std::cout << " - succeeded." << std::endl;
+		}
 		return true;
 	}
 	else {
@@ -398,6 +431,9 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 	std::ofstream outStream;
 	outStream.open(utilitiesPath.generic_string(), std::ofstream::out | std::ofstream::trunc);
 	if (outStream.is_open() && outStream.good()) {
+		if (beVerbose) {
+			std::cout << "Creating utilities file " << utilitiesPath;
+		}
 		//add message
 		outStream << "//this file was auto-generated by res2h" << std::endl << std::endl;
 		//create path to include file RELATIVE to this file
@@ -461,6 +497,9 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 		}
 		//close file
 		outStream.close();
+		if (beVerbose) {
+			std::cout << " - succeeded." << std::endl;
+		}
 		return true;
 	}
 	else {
@@ -540,6 +579,9 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
     std::fstream outStream;
     outStream.open(filePath.string(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
     if (outStream.is_open() && outStream.good()) {
+		if (beVerbose) {
+			std::cout << "Creating binary archive " << filePath;
+		}
         //add magic number
         const unsigned char magicBytes[8] = {'r', 'e', 's', '2', 'h', 'b', 'i', 'n'};
         outStream.write(reinterpret_cast<const char *>(&magicBytes), sizeof(magicBytes));
@@ -620,6 +662,9 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 		}
         //close file
         outStream.close();
+		if (beVerbose) {
+			std::cout << " - succeeded." << std::endl;
+		}
 		//calculate checksum of whole file
 		const uint32_t adler32 = calculateAdler32(filePath);
 		//open file again, move to end of file and append checksum
@@ -633,6 +678,9 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 		else {
 			std::cout << "Error: Failed to open file \"" << filePath.string() << "\" for writing!" << std::endl;
 			return false;
+		}
+		if (beVerbose) {
+			std::cout << "Checksum is " << std::hex << std::showbase << adler32 << "." << std::endl;
 		}
         return true;
     }
@@ -702,7 +750,7 @@ int main(int argc, const char * argv[])
     //does the user want an binary file?
     if (createBinary) {
         //yes. build it.
-        if (createBlob(fileList, outFilePath)) {
+        if (!createBlob(fileList, outFilePath)) {
             std::cout << "Error: Failed to convert to binary file!" << std::endl;
             return -4;
         }
