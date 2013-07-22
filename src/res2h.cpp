@@ -237,7 +237,15 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
             }
             //build new output file name
             temp.outPath = outPath / newFileName;
-			temp.size = 0;
+			//get file size
+			try {
+				temp.size = (size_t)boost::filesystem::file_size(filePath);
+			}
+			catch(...) {
+				std::cout << "Error: Failed to get size of \"" << filePath.string() << "\"!" << std::endl;
+				temp.size = 0;
+			}
+			//add file to list
 			files.push_back(temp);
 		}
 		++fileIt;
@@ -271,7 +279,7 @@ bool convertFile(FileData & fileData, const boost::filesystem::path & commonHead
 			//try getting size of data
 			inStream.seekg(0, std::ios::end);
 			fileData.size = (size_t)inStream.tellg();
-			inStream.seekg(0, std::ios::beg);
+			inStream.seekg(0);
 			//try opening the output file. truncate it when it exists
 			std::ofstream outStream;
 			outStream.open(fileData.outPath.string(), std::ofstream::out | std::ofstream::trunc);
@@ -461,38 +469,171 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 	return true;
 }
 
+/*
+Create Adler-32 checksum from file. Builds checksum from start position till EOF.
+\param[in] filePath Path to the file to build the checksum for.
+\param[in] adler Optional. Adler checksum from last run if you're using more than one file.
+\return Returns the Adler-32 checksum for the file stream or the initial checksum upon failure.
+\note Based on the sample code here: https://tools.ietf.org/html/rfc1950. This is not as safe as CRC-32 (see here: https://en.wikipedia.org/wiki/Adler-32), but should be totally sufficient for us.
+*/
+uint32_t calculateAdler32(const boost::filesystem::path & filePath, uint32_t adler = 1)
+{
+	//open file
+	std::ifstream inStream;
+	inStream.open(filePath.string(), std::ifstream::in | std::ifstream::binary);
+	if (inStream.is_open() && inStream.good()) {
+		//build checksum
+		uint32_t s1 = adler & 0xffff;
+		uint32_t s2 = (adler >> 16) & 0xffff;
+		//loop until EOF
+		while (!inStream.eof() && inStream.good()) {
+			char buffer[1024];
+			std::streamsize readSize = sizeof(buffer);
+			try {
+				//try reading data from input file
+				inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
+			}
+			catch (std::ios_base::failure) {
+				//reading didn't work properly. store how many bytes were actually read
+				readSize = inStream.gcount();
+			}
+			//calculate checksum for buffer
+			for (std::streamsize n = 0; n < readSize; n++) {
+				s1 = (s1 + buffer[n]) % 65521;
+				s2 = (s2 + s1) % 65521;
+			}
+		}
+		//close file
+		inStream.close();
+		//build final checksum
+		return (s2 << 16) + s1;
+	}
+	else {
+		std::cout << "Error: Failed to open file \"" << filePath.string() << "\" for reading!" << std::endl;
+	}
+	return adler;
+}
+
 //Blob file format:
 //Offset    | Type     | Description
 //----------+----------+-------------------------------------------
 //START     | char[8]  | magic number string "res2hbin"
 //08        | uint32_t | file format version number (currently 1)
-//12        | uint32_t | format flags or other crap (currently 0)
+//12        | uint32_t | format flags or other crap for file (currently 0)
 //16        | uint32_t | number of directory and file entries following
 //Directory:
-//20        | uint32_t | offset from end of directory to file entry #0
-//24        | uint32_t | offset from end of directory to file entry #1
+//00        | uint32_t | file entry #0, size of internal name INCLUDING null-terminating character
+//04        | char[]   | file entry #0, internal name (null-terminated)
+//04 + name | uint32_t | file entry #0, format flags for entry (currently 0)
+//08 + name | uint32_t | file entry #0, size of data
+//12 + name | uint32_t | file entry #0, absolute offset of data in file
 //...
-//File entries (first entry at 20 + nrOfEntries * sizeof(uint32)):
-//00        | uint32_t | file #0, size of internal name INCLUDING null-terminating character
-//04        | char *   | file #0, internal name (null-terminated)
-//04 + name | uint32_t | file #0, size of data
-//08 + name | uchar *  | file #0, data
+//data
 //...
-//END       | uint32_t | Adler32 checksum of whole file up to this point
+//END       | uint32_t | Adler-32 RFC1950 checksum of whole file up to this point
 //Obviously this limits you to ~4GB for the whole binary file and ~4GB per data entry. Go cry about it...
+//There is some redundant information here, but that's for reading stuff faster.
+//Also the version and dummy fields might be needed in later versions...
 bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem::path & filePath)
 {
     //try opening the output file. truncate it when it exists
-    std::ofstream outStream;
+    std::fstream outStream;
     outStream.open(filePath.string(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
     if (outStream.is_open() && outStream.good()) {
         //add magic number
         const unsigned char magicBytes[8] = {'r', 'e', 's', '2', 'h', 'b', 'i', 'n'};
-        outStream << magicBytes;
+        outStream.write(reinterpret_cast<const char *>(&magicBytes), sizeof(magicBytes));
+		//add version and format flag
+		const uint32_t fileVersion = 1;
+		const uint32_t fileFlags = 0;
+		outStream.write(reinterpret_cast<const char *>(&fileVersion), sizeof(uint32_t));
+		outStream.write(reinterpret_cast<const char *>(&fileFlags), sizeof(uint32_t));
+		//add number of directory entries
+		const uint32_t fileSize = fileList.size();
+		outStream.write(reinterpret_cast<const char *>(&fileSize), sizeof(uint32_t));
+		//skip through files calculating data start offset behind directory
+		size_t dataStart = 20;
+		std::vector<FileData>::const_iterator fdIt = fileList.cbegin();
+		while (fdIt != fileList.cend()) {
+			//calculate size of entry and to entry start adress
+			dataStart += 16 + fdIt->internalName.size() + 1;
+			++fdIt;
+		}
         //add directory for all files
-        //now add content
-        //close files
+		fdIt = fileList.cbegin();
+		while (fdIt != fileList.cend()) {
+			//add size of name
+			const uint32_t nameSize = fdIt->internalName.size() + 1;
+			outStream.write(reinterpret_cast<const char *>(&nameSize), sizeof(uint32_t));
+			//add name and null-termination
+			outStream << fdIt->internalName << '\0';
+			//add flags
+			const uint32_t entryFlags = 0;
+			outStream.write(reinterpret_cast<const char *>(&entryFlags), sizeof(uint32_t));
+			//add data size
+			outStream.write(reinterpret_cast<const char *>(&fdIt->size), sizeof(uint32_t));
+			//add offset from file start to start of data
+			outStream.write(reinterpret_cast<const char *>(&dataStart), sizeof(uint32_t));
+			//now add size of this entrys data to start offset for next data block
+			dataStart += fdIt->size;
+			++fdIt;
+		}
+		//add data for all files
+		fdIt = fileList.cbegin();
+		while (fdIt != fileList.cend()) {
+			//try to open file
+			std::ifstream inStream;
+			inStream.open(fdIt->inPath.string(), std::ifstream::in | std::ifstream::binary);
+			if (inStream.is_open() && inStream.good()) {
+				std::streamsize overallDataSize = 0;
+				//copy data from input to output file
+				while (!inStream.eof() && inStream.good()) {
+					unsigned char buffer[1024];
+					std::streamsize readSize = sizeof(buffer);
+					try {
+						//try reading data from input file
+						inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
+					}
+					catch (std::ios_base::failure) { /*ignore read failure. salvage what we can.*/ }
+					//store how many bytes were actually read
+					readSize = inStream.gcount();
+					//write to output file
+					outStream.write(reinterpret_cast<const char *>(&buffer), readSize);
+					//increate size of overall data read
+					overallDataSize += readSize;
+				}
+				//close input file
+				inStream.close();
+				//check if the file was completely read
+				if (overallDataSize != fdIt->size) {
+					std::cout << "Error: Failed to completely copy file \"" << fdIt->inPath.string() << "\" to binary data!" << std::endl;
+					outStream.close();
+					return false;
+				}
+			}
+			else {
+				std::cout << "Error: Failed to open file \"" << fdIt->inPath.string() << "\" for reading!" << std::endl;
+				outStream.close();
+				return false;
+			}
+			++fdIt;
+		}
+        //close file
         outStream.close();
+		//calculate checksum of whole file
+		const uint32_t adler32 = calculateAdler32(filePath);
+		//open file again, move to end of file and append checksum
+		outStream.open(filePath.string(), std::ofstream::out | std::ofstream::binary | std::ofstream::app);
+		if (outStream.is_open() && outStream.good()) {
+			outStream.seekg(0, std::ios::end);
+			outStream.write(reinterpret_cast<const char *>(&adler32), sizeof(uint32_t));
+			//close file
+			outStream.close();
+		}
+		else {
+			std::cout << "Error: Failed to open file \"" << filePath.string() << "\" for writing!" << std::endl;
+			return false;
+		}
         return true;
     }
     else {
@@ -522,7 +663,7 @@ int main(int argc, const char * argv[])
 
     if (createBinary) {
         //check if argument 2 is a directory
-        if (!boost::filesystem::is_directory(outFilePath)) {
+        if (boost::filesystem::is_directory(outFilePath)) {
             std::cout << "Error: Output must be a file if -b is used!" << std::endl;
             return -2;
         }
@@ -543,6 +684,10 @@ int main(int argc, const char * argv[])
 	if (boost::filesystem::is_directory(inFilePath) && boost::filesystem::is_directory(inFilePath)) {
         //both files are directories, build file ist
 		fileList = getFileDataFrom(inFilePath, outFilePath, inFilePath, useRecursion);
+		if (fileList.empty()) {
+			std::cout << "Error: No files to convert!" << std::endl;
+			return -3;
+		}
 	}
 	else {
         //just add single input/output file
@@ -559,7 +704,7 @@ int main(int argc, const char * argv[])
         //yes. build it.
         if (createBlob(fileList, outFilePath)) {
             std::cout << "Error: Failed to convert to binary file!" << std::endl;
-            return -3;
+            return -4;
         }
     }
     else {
@@ -568,24 +713,26 @@ int main(int argc, const char * argv[])
         while (fdIt != fileList.cend()) {
             if (!convertFile(*fdIt, commonHeaderFilePath)) {
                 std::cout << "Error: Failed to convert all files. Aborting!" << std::endl;
-                return -3;
+                return -4;
             }
             ++fdIt;
         }
         //do we need to write a header file?
         if (!commonHeaderFilePath.empty()) {
             if (!createCommonHeader(fileList, commonHeaderFilePath, !utilitiesFilePath.empty(), useC)) {
-                return -4;
+                return -5;
             }
             //do we need to create utilities?
             if (!utilitiesFilePath.empty()) {
                 if (!createUtilities(fileList, utilitiesFilePath, commonHeaderFilePath, useC)) {
-                    return -5;
+                    return -6;
                 }
             }
         }
     }
+
+	//profit!!!
+	std::cout << "Succeeded." << std::endl;
 	
 	return 0;
 }
-
