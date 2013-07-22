@@ -5,6 +5,7 @@
 #include <boost/filesystem.hpp>
 
 #include "res2h.h"
+#include "res2hutils.h"
 
 
 struct FileData {
@@ -508,51 +509,6 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 	return true;
 }
 
-/*
-Create Adler-32 checksum from file. Builds checksum from start position till EOF.
-\param[in] filePath Path to the file to build the checksum for.
-\param[in] adler Optional. Adler checksum from last run if you're using more than one file.
-\return Returns the Adler-32 checksum for the file stream or the initial checksum upon failure.
-\note Based on the sample code here: https://tools.ietf.org/html/rfc1950. This is not as safe as CRC-32 (see here: https://en.wikipedia.org/wiki/Adler-32), but should be totally sufficient for us.
-*/
-uint32_t calculateAdler32(const boost::filesystem::path & filePath, uint32_t adler = 1)
-{
-	//open file
-	std::ifstream inStream;
-	inStream.open(filePath.string(), std::ifstream::in | std::ifstream::binary);
-	if (inStream.is_open() && inStream.good()) {
-		//build checksum
-		uint32_t s1 = adler & 0xffff;
-		uint32_t s2 = (adler >> 16) & 0xffff;
-		//loop until EOF
-		while (!inStream.eof() && inStream.good()) {
-			char buffer[1024];
-			std::streamsize readSize = sizeof(buffer);
-			try {
-				//try reading data from input file
-				inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
-			}
-			catch (std::ios_base::failure) {
-				//reading didn't work properly. store how many bytes were actually read
-				readSize = inStream.gcount();
-			}
-			//calculate checksum for buffer
-			for (std::streamsize n = 0; n < readSize; n++) {
-				s1 = (s1 + buffer[n]) % 65521;
-				s2 = (s2 + s1) % 65521;
-			}
-		}
-		//close file
-		inStream.close();
-		//build final checksum
-		return (s2 << 16) + s1;
-	}
-	else {
-		std::cout << "Error: Failed to open file \"" << filePath.string() << "\" for reading!" << std::endl;
-	}
-	return adler;
-}
-
 //Blob file format:
 //Offset         | Type     | Description
 //---------------+----------+-------------------------------------------
@@ -586,7 +542,7 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
         const unsigned char magicBytes[8] = {'r', 'e', 's', '2', 'h', 'b', 'i', 'n'};
         outStream.write(reinterpret_cast<const char *>(&magicBytes), sizeof(magicBytes));
 		//add version and format flag
-		const uint32_t fileVersion = 1;
+		const uint32_t fileVersion = ARCHIVE_VERSION;
 		const uint32_t fileFlags = 0;
 		outStream.write(reinterpret_cast<const char *>(&fileVersion), sizeof(uint32_t));
 		outStream.write(reinterpret_cast<const char *>(&fileFlags), sizeof(uint32_t));
@@ -617,7 +573,7 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 			//add offset from file start to start of data
 			outStream.write(reinterpret_cast<const char *>(&dataStart), sizeof(uint32_t));
 			//add checksum of data
-			const uint32_t checksum = calculateAdler32(fdIt->inPath);
+			const uint32_t checksum = calculateAdler32(fdIt->inPath.string());
 			outStream.write(reinterpret_cast<const char *>(&checksum), sizeof(uint32_t));
 			if (beVerbose) {
 				std::cout << "Creating directory entry for \"" << fdIt->internalName << "\"" << std::endl;
@@ -678,7 +634,7 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 			std::cout << "Binary archive creation succeeded." << std::endl;
 		}
 		//calculate checksum of whole file
-		const uint32_t adler32 = calculateAdler32(filePath);
+		const uint32_t adler32 = calculateAdler32(filePath.string());
 		//open file again, move to end of file and append checksum
 		outStream.open(filePath.string(), std::ofstream::out | std::ofstream::binary | std::ofstream::app);
 		if (outStream.is_open() && outStream.good()) {
