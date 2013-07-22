@@ -743,7 +743,22 @@ int main(int argc, const char * argv[])
 		temp.inPath = inFilePath;
 		temp.outPath = outFilePath;
 		temp.internalName = inFilePath.filename().string(); //remove all, but the file name and extension
-		temp.size = 0;
+		if (beVerbose) {
+			std::cout << "Found input file " << inFilePath << std::endl;
+			std::cout << "Internal name will be \"" << temp.internalName << "\"" << std::endl;
+			std::cout << "Output path is " << temp.outPath << std::endl;
+		}
+		//get file size
+		try {
+			temp.size = (size_t)boost::filesystem::file_size(inFilePath);
+			if (beVerbose) {
+				std::cout << "Size is " << temp.size << " bytes." << std::endl;
+			}
+		}
+		catch(...) {
+			std::cout << "Error: Failed to get size of " << inFilePath << "!" << std::endl;
+			temp.size = 0;
+		}
 		fileList.push_back(temp);
 	}
 
