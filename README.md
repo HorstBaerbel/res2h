@@ -193,7 +193,7 @@ Binary archive format
     </tr>
 </table>
 
-For reading binary files. Include the files "res2hinterface.hpp/.cpp" or "res2hinterface.h/.c" in your project. They help you with resource handling.
+You can read an archive from a file on disk, but also embed an archive in another file, e.g. your executable. For that use the "-a" option to append the archive to the executable (Please note that you can only have one embedded archive). For reading archive files or embedded archives include the files "res2hinterface.hpp/.cpp" or "res2hinterface.h/.c" in your project. They provide all functinos needed for reading resources from archives.
 
 FAQ
 ========

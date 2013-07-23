@@ -607,8 +607,8 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 			std::cout << std::endl << "Creating binary archive " << filePath << std::endl;
 		}
         //add magic number
-        const unsigned char magicBytes[8] = {'r', 'e', 's', '2', 'h', 'b', 'i', 'n'};
-        outStream.write(reinterpret_cast<const char *>(&magicBytes), sizeof(magicBytes));
+        const unsigned char magicBytes[9] = RES2H_MAGIC_BYTES;
+        outStream.write(reinterpret_cast<const char *>(&magicBytes), sizeof(magicBytes) - 1);
 		//add version and format flag
 		const uint32_t fileVersion = RES2H_ARCHIVE_VERSION;
 		const uint32_t fileFlags = 0;

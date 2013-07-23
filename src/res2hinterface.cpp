@@ -6,7 +6,7 @@
 std::map<std::string, Res2h::ResourceEntry> Res2h::resourceMap;
 
 
-bool Res2h::loadArchive(const std::string & archivePath)
+bool Res2h::loadArchive(const std::string & archivePath, bool embeddedArchive)
 {
     //check if there are entries for this archive already in the map and delete them
     std::map<std::string, ResourceEntry>::iterator rmIt = resourceMap.begin();
@@ -23,11 +23,38 @@ bool Res2h::loadArchive(const std::string & archivePath)
     std::ifstream inStream;
     inStream.open(archivePath, std::ifstream::in | std::ifstream::binary);
     if (inStream.is_open() && inStream.good()) {
+		//if this is an embedded archive, search for the header first
+		size_t archiveOffset = 0;
+		if (embeddedArchive) {
+			archiveOffset = UINT_MAX;
+			//seek to end minus buffer size
+			unsigned char buffer[1024] = {0};
+			inStream.seekg(sizeof(buffer), std::ios::end);
+			//read whole file to search for archive
+			while (inStream.tellg() && inStream.good()) {
+				//read block of data and convert to string
+				inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
+				std::string magicString(reinterpret_cast<char *>(&buffer), sizeof(buffer));
+				//try to find magic bytes
+				std::streamoff magicPosition = magicString.find(RES2H_MAGIC_BYTES);
+				if (magicPosition != std::string::npos) {
+					//found. move to start position and store position
+					inStream.seekg(inStream.tellg() + magicPosition);
+					archiveOffset = (size_t)inStream.tellg();
+					break;
+				}
+			}
+			//check if the archive was found
+			if (archiveOffset == UINT_MAX) {
+				inStream.close();
+				throw Res2hException(std::string("loadArchive() - Failed to find archive in file \"") + archivePath + "\"!");
+			}
+		}
         //worked. read magic bytes
-        unsigned char magicBytes[8] = {0};
+		unsigned char magicBytes[8] = {0};
         inStream.read(reinterpret_cast<char *>(&magicBytes), sizeof(magicBytes));
         std::string magicString(reinterpret_cast<char *>(&magicBytes), sizeof(magicBytes));
-        if (magicString == "res2hbin") {
+        if (magicString == RES2H_MAGIC_BYTES) {
             //magic bytes ok. control checksum. close first for calling checksum function
             inStream.close();
             uint32_t calculatedChecksum = calculateAdler32(archivePath);
@@ -69,8 +96,9 @@ bool Res2h::loadArchive(const std::string & archivePath)
                             inStream.read(reinterpret_cast<char *>(&temp.dataOffset), sizeof(uint32_t));
                             //read data checksum
                             inStream.read(reinterpret_cast<char *>(&temp.checksum), sizeof(uint32_t));
-                            //add archive path
+                            //add archive path and offset
                             temp.archivePath = archivePath;
+							temp.archiveOffset = archiveOffset;
                             //add to map
                             resourceMap[temp.fileName] = temp;
                         }
@@ -79,18 +107,22 @@ bool Res2h::loadArchive(const std::string & archivePath)
                         return true;
                     }
                     else {
+						inStream.close();
                         throw Res2hException(std::string("loadArchive() - Archive \"") + archivePath + "\" contains no files!");
                     }
                 }
                 else {
+					inStream.close();
                     throw Res2hException(std::string("loadArchive() - Archive \"") + archivePath + "\" has a newer file version and can not be read!");
                 }
             }
             else {
+				inStream.close();
                 throw Res2hException(std::string("loadArchive() - Archive \"") + archivePath + "\" has a bad checksum!");
             }
         }
         else {
+			inStream.close();
             throw Res2hException(std::string("loadArchive() - File \"") + archivePath + "\" doesn't seem to be a res2h archive!");
         }
     }

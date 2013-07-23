@@ -20,6 +20,7 @@ public:
 		size_t dataOffset; //!<Offset in binary archive if any.
         uint32_t checksum; //!<Checksum of raw stored data.
         std::string archivePath; //!<Path on disk to binary archive file.
+		size_t archiveOffset; //!<Offset of the archive data in the archive file. Used when an archive is embedded e.g. in an executable.
 	};
 
 private:
@@ -29,9 +30,11 @@ public:
 	/*!
 	Open binary archive from disk and load directory into memory. You can add as many archives as you want.
 	\param[in] archivePath Archive path.
+	\param[in] embeddedArchive Optional. Pass true if the archive data is appended to another file. It will be searched from the end of the file towards the start.
+	\note Archives can be appended to other files using res2h: "res2h <ARCHIVE> <APPEND_TARGET> -a"
 	\return Returns true if opening and loading the archive directory worked.
 	*/
-	static bool loadArchive(const std::string & archivePath);
+	static bool loadArchive(const std::string & archivePath, bool embeddedArchive = false);
 
 	/*!
 	Load file content. Can be either a file on disk or a file in a binary archive.
