@@ -191,6 +191,15 @@ Binary archive format
     </tr>
 </table>
 
+For reading binary files. Include the files "res2hinterface.hpp/.cpp" or "res2hinterface.h/.c" in your project. They help you with resource handling.
+
+FAQ
+========
+- Q: Why the duplicate code?
+A: I wanted to have monolightic files for C and C++. The idea was that including one header and one source file in your project should be enough to get the whole thing running.
+- Q: The C++ interface is much better...
+A: Yes. It got more love. C++ makes stuff much easier to implement. I figured the C interface would be used on low-power systems anyway and thus should be slimmer.
+
 I found a bug or have suggestion
 ========
 

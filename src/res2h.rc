@@ -3,8 +3,8 @@
 #include "windows.h"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION RESOURCE_VERSION
- PRODUCTVERSION RESOURCE_VERSION
+ FILEVERSION RES2H_RESOURCE_VERSION
+ PRODUCTVERSION RES2H_RESOURCE_VERSION
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -21,13 +21,13 @@ BEGIN
         BEGIN
             VALUE "Comments", "\0"
             VALUE "FileDescription", "res2h resource compiler\0"
-            VALUE "FileVersion", RESOURCE_VERSION_STRING
+            VALUE "FileVersion", RES2H_RESOURCE_VERSION_STRING
             VALUE "InternalName", "res2h.exe\0"
             VALUE "LegalCopyright", "\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "res2h.exe\0"
             VALUE "ProductName", "res2h\0"
-            VALUE "ProductVersion", RESOURCE_VERSION_STRING
+            VALUE "ProductVersion", RES2H_RESOURCE_VERSION_STRING
         END
     END
     BLOCK "VarFileInfo"

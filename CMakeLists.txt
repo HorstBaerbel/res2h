@@ -42,13 +42,11 @@ set(R2H_INCLUDE_DIRS
 set(R2H_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.h
 )
 
 set(R2H_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.cpp
 )
 
 #-------------------------------------------------------------------------------

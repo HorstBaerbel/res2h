@@ -1,12 +1,12 @@
 #pragma once
 
+#include <stdint.h>
 #include <string>
 #include <memory>
 #include <map>
 #include <exception>
 
 #include "res2h.h"
-#include "res2hutils.h"
 
 
 class Res2h
@@ -47,6 +47,15 @@ public:
     \note This releases the shared_ptr to the data. If you keep more instances of that shared_ptr, memory will NOT be freed!
 	*/
 	static void releaseCache();
+
+	/*
+	Create Adler-32 checksum from file. Builds checksum from start position till EOF.
+	\param[in] filePath Path to the file to build the checksum for.
+	\param[in] adler Optional. Adler checksum from last run if you're using more than one file.
+	\return Returns the Adler-32 checksum for the file stream or the initial checksum upon failure.
+	\note Based on the sample code here: https://tools.ietf.org/html/rfc1950. This is not as safe as CRC-32 (see here: https://en.wikipedia.org/wiki/Adler-32), but should be totally sufficient for us.
+	*/
+	static uint32_t calculateAdler32(const std::string & filePath, uint32_t adler = 1);
 };
 
 //-----------------------------------------------------------------------------

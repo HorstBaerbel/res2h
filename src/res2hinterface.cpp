@@ -43,7 +43,7 @@ bool Res2h::loadArchive(const std::string & archivePath)
                 //check file version
                 uint32_t fileVersion = 0;
                 inStream.read(reinterpret_cast<char *>(&fileVersion), sizeof(uint32_t));
-                if (fileVersion <= ARCHIVE_VERSION) {
+                if (fileVersion <= RES2H_ARCHIVE_VERSION) {
                     //file version ok. skip currently unused flags
                     inStream.seekg(sizeof(uint32_t), std::ios::cur);
                     //read number of directory entries
@@ -79,23 +79,23 @@ bool Res2h::loadArchive(const std::string & archivePath)
                         return true;
                     }
                     else {
-                        throw Res2hException(std::string("Archive \"") + archivePath + "\" contains no files!");
+                        throw Res2hException(std::string("loadArchive() - Archive \"") + archivePath + "\" contains no files!");
                     }
                 }
                 else {
-                    throw Res2hException(std::string("Archive \"") + archivePath + "\" has a newer file version and can not be read!");
+                    throw Res2hException(std::string("loadArchive() - Archive \"") + archivePath + "\" has a newer file version and can not be read!");
                 }
             }
             else {
-                throw Res2hException(std::string("Archive \"") + archivePath + "\" has a bad checksum!");
+                throw Res2hException(std::string("loadArchive() - Archive \"") + archivePath + "\" has a bad checksum!");
             }
         }
         else {
-            throw Res2hException(std::string("File \"") + archivePath + "\" doesn't seem to be a res2h archive!");
+            throw Res2hException(std::string("loadArchive() - File \"") + archivePath + "\" doesn't seem to be a res2h archive!");
         }
     }
     else {
-        throw Res2hException(std::string("Failed to open archive \"") + archivePath + "\".");
+        throw Res2hException(std::string("loadArchive() - Failed to open archive \"") + archivePath + "\".");
     }
 	return false;
 }
@@ -117,6 +117,44 @@ void Res2h::releaseCache()
         }
         ++rmIt;
     }
+}
+
+uint32_t Res2h::calculateAdler32(const std::string & filePath, uint32_t adler)
+{
+	//open file
+	std::ifstream inStream;
+	inStream.open(filePath, std::ifstream::in | std::ifstream::binary);
+	if (inStream.is_open() && inStream.good()) {
+		//build checksum
+		uint32_t s1 = adler & 0xffff;
+		uint32_t s2 = (adler >> 16) & 0xffff;
+		//loop until EOF
+		while (!inStream.eof() && inStream.good()) {
+			char buffer[1024];
+			std::streamsize readSize = sizeof(buffer);
+			try {
+				//try reading data from input file
+				inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
+			}
+			catch (std::ios_base::failure) {
+				//reading didn't work properly. store how many bytes were actually read
+				readSize = inStream.gcount();
+			}
+			//calculate checksum for buffer
+			for (std::streamsize n = 0; n < readSize; n++) {
+				s1 = (s1 + buffer[n]) % 65521;
+				s2 = (s2 + s1) % 65521;
+			}
+		}
+		//close file
+		inStream.close();
+		//build final checksum
+		return (s2 << 16) + s1;
+	}
+	else {
+		throw Res2hException(std::string("calculateAdler32() - Failed to open file \"") + filePath + "\".");
+	}
+	return adler;
 }
 
 //-----------------------------------------------------------------------------
