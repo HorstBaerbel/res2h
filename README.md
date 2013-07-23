@@ -1,11 +1,12 @@
 res2h
 ========
 
-res2h can convert binary data from files to a raw hex arrays in .c/.cpp source files which you can then include in your project and compile them into the executable. It can also create a common header that lets you access all the converted arrays with one include. If you don't want your data to be loaded into memory res2h also provides the possiblility to create one binary archive containg all the files which you can the access via the "Res2h" class provided in seperate headers. You can also embed this archive in your executable, so you only have one file and access it like you would with an archive on disk.
+**tl;dr:** Load binary data from arbitrary files and dump it to a raw hex C/C++ array for compiling into your software, or bundle the data from all the files in a binary archive.
 
-tl;dr: Load plain binary data from arbitrary files and dump them to a raw hex C/C++ array for compiling into your software, or bundle the files in a binary archive.
+**res2h** can convert binary data from files to a raw hex arrays in .c/.cpp source files which you can then include in your project and compile them into the executable. It can also create a common header that lets you access all the converted arrays with one include. If you don't want your data to be loaded into memory res2h also provides the possiblility to create one binary archive containing all the files which you can then access via the "Res2h" class provided in seperate headers. You can also embed this archive in your executable, so you only have one file, and access it like you would with any other archive on disk.
+It is inspired by [bin2h](http://code.google.com/p/bin2h/) with added functionality. It should at least work in Windows, Ubuntu and Raspbian.
 
-Inspired by [bin2h](http://code.google.com/p/bin2h/) with added functionality. It should at least work in Windows, Ubuntu and Raspbian.
+**res2hdump** is a tool that lets you dump information and/or files from a binary res2h archive or an archive embedded in another file, e.g. executable. It also serves as an example on how to use the "Res2h" class contained in the "res2hinterface" files.
 
 License
 ========
@@ -22,12 +23,19 @@ cmake .
 make
 </pre>
 
-G++ 4.7 (for C++11), boost-filesystem and boost-system are needed to compile. For installing G++ 4.7 see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
-Install the boost development packages with:
+G++ 4.7 (for C++11), boost-filesystem and boost-system are needed to compile "res2h" and "res2hdump", but not the "res2hinterface". For installing G++ 4.7 see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
+Install the boost packages with:
 ```
-sudo apt-get libboost<VERSION>-dev-filesystem
-sudo apt-get libboost<VERSION>-dev-system
+sudo apt-get install libboost-filesystem-dev
+sudo apt-get install libboost-system-dev
+sudo apt-get install libboost-filesystem<VERSION>
+sudo apt-get install libboost-filesystem<VERSION>
 ```
+or
+```
+sudo apt-get install libboost-dev
+```
+for to get all of boost.
 
 Usage - res2h
 ========
@@ -199,7 +207,7 @@ Binary archive format
 </table>
 
 You can read an archive from a file on disk, but also embed an archive in another file, e.g. your executable. For that use the "-a" option to append the archive to the executable (Please note that you can only have one embedded archive). For reading archive files or embedded archives include the files "res2hinterface.hpp/.cpp" or "res2hinterface.h/.c" in your project. They provide all functions needed for reading resources from archives.
-You can find an example on how to use the functions in "res2hdum.cpp" resp. the "res2hdump" project.
+You can find an example on how to use the functions in "res2hdump.cpp" resp. the "res2hdump" project.
 
 Usage - res2hdump
 ========
