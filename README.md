@@ -37,12 +37,14 @@ res2h <infile/indir> <outfile/outdir> [options]
 - -h <headerfile> Puts all declarations in the file "headerfile" using "extern" and includes that header file in the source files.
 - -u <sourcefile> Create utility functions and arrays in a .c/.cpp file. Only makes sense in combination with -h.
 - -b Compile binary archive outfile containing all infile(s). For reading in your software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs.
-- -v Be verbose
+- -a Append infile to outfile. Can be used to append an archive to an executable.
+- -v Be verbose.
 
 **Examples:**
 - Convert a single file: ```res2h ./lenna.png ./resources/lenna_png.cpp -c```
 - Convert all files in a directory, create a common header and utilities: ```res2h ./data ./resources -s -h resources.h -u resources.cpp```
 - Convert data to a binary archive: ```res2h ./data ./resources/data.bin -b```
+- Append an archive to an executable: ```res2h ./resources/data.bin ./program.exe -a```
 
 Output
 ========

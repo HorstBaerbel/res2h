@@ -20,6 +20,7 @@ bool beVerbose = false;
 bool useRecursion = false;
 bool useC = false;
 bool createBinary = false;
+bool appendFile = false;
 boost::filesystem::path commonHeaderFilePath;
 boost::filesystem::path utilitiesFilePath;
 boost::filesystem::path inFilePath;
@@ -103,11 +104,13 @@ void printUsage()
 	std::cout << "-h <headerfile> Puts all declarations in a common \"headerfile\" using \"extern\"" << std::endl << "    and includes that header file in the source files." << std::endl;
 	std::cout << "-u <sourcefile> Create utility functions and arrays in a .c/.cpp file." << std::endl << "    Only makes sense in combination with -h" << std::endl;
     std::cout << "-b Compile binary archive outfile containing all infile(s). For reading in your" << std::endl << "    software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs." << std::endl;
-	std::cout << "-v Be verbose" << std::endl;
+	std::cout << "-a Append infile to outfile. Can be used to append an archive to an executable." << std::endl;
+	std::cout << "-v Be verbose." << std::endl;
     std::cout << "Examples:" << std::endl;
     std::cout << "res2h ./lenna.png ./resources/lenna_png.cpp -c (convert single file)" << std::endl;
     std::cout << "res2h ./data ./resources -s -h resources.h -u resources.cpp (convert directory)" << std::endl;
     std::cout << "res2h ./data ./resources/data.bin -b (convert directory to binary file)" << std::endl;
+	std::cout << "res2h ./resources/data.bin ./program.exe -a (append archive to executable)" << std::endl;
 }
 
 bool readArguments(int argc, const char * argv[])
@@ -117,11 +120,27 @@ bool readArguments(int argc, const char * argv[])
 		//read argument from list
 		std::string argument = argv[i];
 		//check what it is
-        if (argument == "-b") {
+		if (argument == "-a") {
+            if (!commonHeaderFilePath.empty() || !utilitiesFilePath.empty()) {
+                std::cout << "Error: -a can not be combined with -h or -u!" << std::endl;
+				return false;
+            }
+			else if (createBinary) {
+                std::cout << "Error: -a can not be combined with -b!" << std::endl;
+				return false;
+			}
+			appendFile = true;
+			pastFiles = true;
+		}
+        else if (argument == "-b") {
             if (!commonHeaderFilePath.empty() || !utilitiesFilePath.empty()) {
                 std::cout << "Error: -b can not be combined with -h or -u!" << std::endl;
 				return false;
             }
+			else if (appendFile) {
+                std::cout << "Error: -b can not be combined with -a!" << std::endl;
+				return false;
+			}
             createBinary = true;
 			pastFiles = true;
 		}
@@ -142,6 +161,10 @@ bool readArguments(int argc, const char * argv[])
                 std::cout << "Error: -h can not be combined with -b!" << std::endl;
 				return false;
             }
+			else if (appendFile) {
+                std::cout << "Error: -h can not be combined with -a!" << std::endl;
+				return false;
+			}
 			//try getting next argument as header file name
 			i++;
 			if (i < argc && argv[i] != nullptr) {
@@ -160,6 +183,10 @@ bool readArguments(int argc, const char * argv[])
                 std::cout << "Error: -u can not be combined with -b!" << std::endl;
 				return false;
             }
+			else if (appendFile) {
+                std::cout << "Error: -u can not be combined with -a!" << std::endl;
+				return false;
+			}
 			//try getting next argument as utility file name
 			i++;
 			if (i < argc && argv[i] != nullptr) {
@@ -700,6 +727,56 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 	return false;
 }
 
+bool appendAtoB(const boost::filesystem::path & destinationPath, const boost::filesystem::path & sourcePath)
+{
+	//try opening the output file.
+    std::fstream outStream;
+    outStream.open(destinationPath.string(), std::ofstream::out | std::ofstream::binary | std::ofstream::app);
+    if (outStream.is_open() && outStream.good()) {
+		if (beVerbose) {
+			std::cout << std::endl << "Opened output file " << destinationPath << std::endl;
+		}
+		//seek to the end
+		outStream.seekg(0, std::ios::end);
+		//open input file
+		std::ifstream inStream;
+		inStream.open(sourcePath.string(), std::ifstream::in | std::ifstream::binary);
+		if (inStream.is_open() && inStream.good()) {
+			if (beVerbose) {
+				std::cout << "Opened input file \"" << sourcePath << "\". Appending data to output." << std::endl;
+			}
+			//copy data from input to output file
+			while (!inStream.eof() && inStream.good()) {
+				unsigned char buffer[1024];
+				std::streamsize readSize = sizeof(buffer);
+				try {
+					//try reading data from input file
+					inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
+				}
+				catch (std::ios_base::failure) { /*ignore read failure. salvage what we can.*/ }
+				//store how many bytes were actually read
+				readSize = inStream.gcount();
+				//write to output file
+				outStream.write(reinterpret_cast<const char *>(&buffer), readSize);
+			}
+			//close input file
+			inStream.close();
+		}
+		else {
+			std::cout << "Error: Failed to open input file \"" << sourcePath.string() << "\" for reading!" << std::endl;
+			outStream.close();
+			return false;
+		}
+		//close output file
+		outStream.close();
+		return true;
+	}
+	else {
+		std::cout << "Error: Failed to open output file \"" << destinationPath.string() << "\" for writing!" << std::endl;
+	}
+	return false;
+}
+
 //-----------------------------------------------------------------------------
 
 int main(int argc, const char * argv[])
@@ -719,12 +796,19 @@ int main(int argc, const char * argv[])
 	}
 
     if (createBinary) {
-        //check if argument 2 is a directory
+        //check if argument 2 is a file
         if (boost::filesystem::is_directory(outFilePath)) {
             std::cout << "Error: Output must be a file if -b is used!" << std::endl;
             return -2;
         }
     }
+	else if (appendFile) {
+		//check if argument 2 is a file
+        if (boost::filesystem::is_directory(outFilePath)) {
+            std::cout << "Error: Output must be a file if -a is used!" << std::endl;
+            return -2;
+        }
+	}
     else if (boost::filesystem::is_directory(inFilePath) != boost::filesystem::is_directory(outFilePath)) {
         //check if output directory exists
         if (boost::filesystem::is_directory(outFilePath) && !boost::filesystem::exists(outFilePath)) {
@@ -736,72 +820,81 @@ int main(int argc, const char * argv[])
 		return -2;
 	}
 
-	//build list of files to process
-	std::vector<FileData> fileList;
-	if (boost::filesystem::is_directory(inFilePath) && boost::filesystem::is_directory(inFilePath)) {
-        //both files are directories, build file ist
-		fileList = getFileDataFrom(inFilePath, outFilePath, inFilePath, useRecursion);
-		if (fileList.empty()) {
-			std::cout << "Error: No files to convert!" << std::endl;
+	if (appendFile) {
+		//append file a to b
+		if (!appendAtoB(outFilePath, inFilePath)) {
+			std::cout << "Error: Failed to append data to executable!" << std::endl;
 			return -3;
 		}
 	}
 	else {
-        //just add single input/output file
-		FileData temp;
-		temp.inPath = inFilePath;
-		temp.outPath = outFilePath;
-		temp.internalName = inFilePath.filename().string(); //remove all, but the file name and extension
-		if (beVerbose) {
-			std::cout << "Found input file " << inFilePath << std::endl;
-			std::cout << "Internal name will be \"" << temp.internalName << "\"" << std::endl;
-			std::cout << "Output path is " << temp.outPath << std::endl;
-		}
-		//get file size
-		try {
-			temp.size = (size_t)boost::filesystem::file_size(inFilePath);
-			if (beVerbose) {
-				std::cout << "Size is " << temp.size << " bytes." << std::endl;
+		//build list of files to process
+		std::vector<FileData> fileList;
+		if (boost::filesystem::is_directory(inFilePath) && boost::filesystem::is_directory(inFilePath)) {
+			//both files are directories, build file ist
+			fileList = getFileDataFrom(inFilePath, outFilePath, inFilePath, useRecursion);
+			if (fileList.empty()) {
+				std::cout << "Error: No files to convert!" << std::endl;
+				return -3;
 			}
 		}
-		catch(...) {
-			std::cout << "Error: Failed to get size of " << inFilePath << "!" << std::endl;
-			temp.size = 0;
+		else {
+			//just add single input/output file
+			FileData temp;
+			temp.inPath = inFilePath;
+			temp.outPath = outFilePath;
+			temp.internalName = inFilePath.filename().string(); //remove all, but the file name and extension
+			if (beVerbose) {
+				std::cout << "Found input file " << inFilePath << std::endl;
+				std::cout << "Internal name will be \"" << temp.internalName << "\"" << std::endl;
+				std::cout << "Output path is " << temp.outPath << std::endl;
+			}
+			//get file size
+			try {
+				temp.size = (size_t)boost::filesystem::file_size(inFilePath);
+				if (beVerbose) {
+					std::cout << "Size is " << temp.size << " bytes." << std::endl;
+				}
+			}
+			catch(...) {
+				std::cout << "Error: Failed to get size of " << inFilePath << "!" << std::endl;
+				temp.size = 0;
+			}
+			fileList.push_back(temp);
 		}
-		fileList.push_back(temp);
-	}
 
-    //does the user want an binary file?
-    if (createBinary) {
-        //yes. build it.
-        if (!createBlob(fileList, outFilePath)) {
-            std::cout << "Error: Failed to convert to binary file!" << std::endl;
-            return -4;
-        }
-    }
-    else {
-        //no. convert files to .c/.cpp. loop through list, converting files
-        std::vector<FileData>::iterator fdIt = fileList.begin();
-        while (fdIt != fileList.cend()) {
-            if (!convertFile(*fdIt, commonHeaderFilePath)) {
-                std::cout << "Error: Failed to convert all files. Aborting!" << std::endl;
-                return -4;
-            }
-            ++fdIt;
-        }
-        //do we need to write a header file?
-        if (!commonHeaderFilePath.empty()) {
-            if (!createCommonHeader(fileList, commonHeaderFilePath, !utilitiesFilePath.empty(), useC)) {
-                return -5;
-            }
-            //do we need to create utilities?
-            if (!utilitiesFilePath.empty()) {
-                if (!createUtilities(fileList, utilitiesFilePath, commonHeaderFilePath, useC)) {
-                    return -6;
-                }
-            }
-        }
-    }
+		//does the user want an binary file?
+		if (createBinary) {
+			//yes. build it.
+			if (!createBlob(fileList, outFilePath)) {
+				std::cout << "Error: Failed to convert to binary file!" << std::endl;
+				return -4;
+			}
+		}
+		else {
+			//no. convert files to .c/.cpp. loop through list, converting files
+			std::vector<FileData>::iterator fdIt = fileList.begin();
+			while (fdIt != fileList.cend()) {
+				if (!convertFile(*fdIt, commonHeaderFilePath)) {
+					std::cout << "Error: Failed to convert all files. Aborting!" << std::endl;
+					return -4;
+				}
+				++fdIt;
+			}
+			//do we need to write a header file?
+			if (!commonHeaderFilePath.empty()) {
+				if (!createCommonHeader(fileList, commonHeaderFilePath, !utilitiesFilePath.empty(), useC)) {
+					return -5;
+				}
+				//do we need to create utilities?
+				if (!utilitiesFilePath.empty()) {
+					if (!createUtilities(fileList, utilitiesFilePath, commonHeaderFilePath, useC)) {
+						return -6;
+					}
+				}
+			}
+		}
+	} //if (!appendFile) {
 
 	//profit!!!
 	std::cout << "Succeeded." << std::endl;
