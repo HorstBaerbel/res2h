@@ -41,12 +41,20 @@ set(R2H_INCLUDE_DIRS
 
 set(R2H_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.hpp
 )
 
 set(R2H_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
+)
+
+#define headers and sources for dump executable
+set(R2H_DUMP_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.hpp
+)
+
+set(R2H_DUMP_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2hdump.cpp
 )
 
 #-------------------------------------------------------------------------------
@@ -82,6 +90,9 @@ set(LIBRARY_OUTPUT_PATH ${dir} CACHE PATH "Build directory" FORCE)
 include_directories(${R2H_INCLUDE_DIRS})
 add_executable(res2h ${R2H_SOURCES} ${R2H_HEADERS})
 target_link_libraries(res2h ${R2H_LIBRARIES})
+
+#add dump executable to project
+add_executable(res2hdump ${R2H_DUMP_SOURCES} ${R2H_DUMP_HEADERS})
 
 #-------------------------------------------------------------------------------
 #special properties for windows builds

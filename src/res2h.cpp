@@ -107,7 +107,7 @@ void printUsage()
 	std::cout << "-a Append infile to outfile. Can be used to append an archive to an executable." << std::endl;
 	std::cout << "-v Be verbose." << std::endl;
     std::cout << "Examples:" << std::endl;
-    std::cout << "res2h ./lenna.png ./resources/lenna_png.cpp -c (convert single file)" << std::endl;
+    std::cout << "res2h ./lenna.png ./resources/lenna_png.cpp (convert single file)" << std::endl;
     std::cout << "res2h ./data ./resources -s -h resources.h -u resources.cpp (convert directory)" << std::endl;
     std::cout << "res2h ./data ./resources/data.bin -b (convert directory to binary file)" << std::endl;
 	std::cout << "res2h ./resources/data.bin ./program.exe -a (append archive to executable)" << std::endl;

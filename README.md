@@ -1,7 +1,11 @@
 res2h
 ========
 
-Load plain binary data from arbitrary files and dump them to a raw hex C/C++ array for compiling in your software. Inspired by [bin2h](http://code.google.com/p/bin2h/) with added functionality. It should at least work in Windows, Ubuntu and Raspbian.
+res2h can convert binary data from files to a raw hex arrays in .c/.cpp source files which you can then include in your project and compile them into the executable. It can also create a common header that lets you access all the converted arrays with one include. If you don't want your data to be loaded into memory res2h also provides the possiblility to create one binary archive containg all the files which you can the access via the "Res2h" class provided in seperate headers. You can also embed this archive in your executable, so you only have one file and access it like you would with an archive on disk.
+
+tl;dr: Load plain binary data from arbitrary files and dump them to a raw hex C/C++ array for compiling into your software, or bundle the files in a binary archive.
+
+Inspired by [bin2h](http://code.google.com/p/bin2h/) with added functionality. It should at least work in Windows, Ubuntu and Raspbian.
 
 License
 ========
@@ -25,8 +29,9 @@ sudo apt-get libboost<VERSION>-dev-filesystem
 sudo apt-get libboost<VERSION>-dev-system
 ```
 
-Usage
+Usage - res2h
 ========
+
 ```
 res2h <infile/indir> <outfile/outdir> [options]
 ```
@@ -41,7 +46,7 @@ res2h <infile/indir> <outfile/outdir> [options]
 - -v Be verbose.
 
 **Examples:**
-- Convert a single file: ```res2h ./lenna.png ./resources/lenna_png.cpp -c```
+- Convert a single file: ```res2h ./lenna.png ./resources/lenna_png.cpp```
 - Convert all files in a directory, create a common header and utilities: ```res2h ./data ./resources -s -h resources.h -u resources.cpp```
 - Convert data to a binary archive: ```res2h ./data ./resources/data.bin -b```
 - Append an archive to an executable: ```res2h ./resources/data.bin ./program.exe -a```
@@ -193,14 +198,30 @@ Binary archive format
     </tr>
 </table>
 
-You can read an archive from a file on disk, but also embed an archive in another file, e.g. your executable. For that use the "-a" option to append the archive to the executable (Please note that you can only have one embedded archive). For reading archive files or embedded archives include the files "res2hinterface.hpp/.cpp" or "res2hinterface.h/.c" in your project. They provide all functinos needed for reading resources from archives.
+You can read an archive from a file on disk, but also embed an archive in another file, e.g. your executable. For that use the "-a" option to append the archive to the executable (Please note that you can only have one embedded archive). For reading archive files or embedded archives include the files "res2hinterface.hpp/.cpp" or "res2hinterface.h/.c" in your project. They provide all functions needed for reading resources from archives.
+You can find an example on how to use the functions in "res2hdum.cpp" resp. the "res2hdump" project.
+
+Usage - res2hdump
+========
+
+```
+res2hdump <archive> <outdir> [options]
+```
+
+**Valid options:**
+- -f Recreate full path structure, creating directories as needed.
+- -i Display information about the archive and files, but don't extract anything.
+- -v Be verbose.
+
+**Examples:**
+- Display information about the archive: ```res2hdump ./resources/data.bin -i```
+- Extract all files from an archive with full paths: ```res2hdump ./resources/data.bin ./resources -f```
+- Extract files from embedded archive: ```res2hdump ./resources/program.exe ./resources```
 
 FAQ
 ========
-- Q: Why the duplicate code?
-A: I wanted to have monolightic files for C and C++. The idea was that including one header and one source file in your project should be enough to get the whole thing running.
-- Q: The C++ interface is much better...
-A: Yes. It got more love. C++ makes stuff much easier to implement. I figured the C interface would be used on low-power systems anyway and thus should be slimmer.
+- **Q:** Why the duplicate code? **A:** I wanted to have monolithic files for C and C++. The idea was that including one header and one source file in your project should be enough to get the whole thing running.
+- **Q:** The C++ interface is much better... **A:** Yes. It got more love. C++ makes stuff much easier to implement. I figured the C interface would be used on low-power systems anyway and thus should be slimmer.
 
 I found a bug or have suggestion
 ========
