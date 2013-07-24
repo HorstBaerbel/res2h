@@ -1,10 +1,10 @@
 res2h
 ========
 
-**tl;dr:** Load binary data from arbitrary files and dump it to a raw hex C/C++ array for compiling into your software, or bundle the data from all the files in a binary archive.
+**tl;dr:** Load binary data from arbitrary files and dump it to a raw hex C/C++ array for compiling into your software, or bundle the data from all the files in a binary archive. It is inspired by [bin2h](http://code.google.com/p/bin2h/) with added functionality.
 
 **res2h** can convert binary data from files to a raw hex arrays in .c/.cpp source files which you can then include in your project and compile them into the executable. It can also create a common header that lets you access all the converted arrays with one include. If you don't want your data to be loaded into memory res2h also provides the possiblility to create one binary archive containing all the files which you can then access via the "Res2h" class provided in seperate headers. You can also embed this archive in your executable, so you only have one file, and access it like you would with any other archive on disk.
-It is inspired by [bin2h](http://code.google.com/p/bin2h/) with added functionality. It should at least work in Windows, Ubuntu and Raspbian.
+It should compile and work at least in Windows, Ubuntu and Raspbian.
 
 **res2hdump** is a tool that lets you dump information and/or files from a binary res2h archive or an archive embedded in another file, e.g. executable. It also serves as an example on how to use the "Res2h" class contained in the "res2hinterface" files.
 
@@ -209,7 +209,7 @@ Binary archive format
     </tr>
 </table>
 
-You can read an archive from a file on disk, but also embed an archive in another file, e.g. your executable. For that use the "-a" option to append the archive to the executable (Please note that you can only have one embedded archive). For reading archive files or embedded archives include the files "res2hinterface.hpp/.cpp" or "res2hinterface.h/.c" in your project. They provide all functions needed for reading resources from archives.
+You can read an archive from a file on disk, but also embed an archive in another file, e.g. your executable. For that use the "-a" option to append the archive to the executable (Please note that you can only have one embedded archive). For reading archive files or embedded archives include the files "res2hinterface.hpp/.cpp" and "res2hutils.hpp/.cpp" in your project. They provide all functions needed for reading resources from archives.
 You can find an example on how to use the functions in "res2hdump.cpp" resp. the "res2hdump" project.
 
 Usage - res2hdump
@@ -231,7 +231,6 @@ res2hdump <archive> <outdir> [options]
 
 FAQ
 ========
-- **Q:** Why the duplicate code? **A:** I wanted to have monolithic files for C and C++. The idea was that including one header and one source file in your project should be enough to get the whole thing running.
 - **Q:** The C++ interface is much better... **A:** Yes. It got more love. C++ makes stuff much easier to implement. I figured the C interface would be used on low-power systems anyway and thus should be slimmer.
 
 I found a bug or have suggestion
