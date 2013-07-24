@@ -5,6 +5,7 @@
 #include <boost/filesystem.hpp>
 
 #include "res2h.h"
+#include "res2hutils.hpp"
 
 
 struct FileData {
@@ -535,62 +536,21 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 	return true;
 }
 
-/*
-Create Adler-32 checksum from file. Builds checksum from start position till EOF.
-\param[in] filePath Path to the file to build the checksum for.
-\param[in] adler Optional. Adler checksum from last run if you're using more than one file.
-\return Returns the Adler-32 checksum for the file stream or the initial checksum upon failure.
-\note Based on the sample code here: https://tools.ietf.org/html/rfc1950. This is not as safe as CRC-32 (see here: https://en.wikipedia.org/wiki/Adler-32), but should be totally sufficient for us.
-*/
-uint32_t calculateAdler32(const std::string & filePath, uint32_t adler = 1)
-{
-	//open file
-	std::ifstream inStream;
-	inStream.open(filePath, std::ifstream::in | std::ifstream::binary);
-	if (inStream.is_open() && inStream.good()) {
-		//build checksum
-		uint32_t s1 = adler & 0xffff;
-		uint32_t s2 = (adler >> 16) & 0xffff;
-		//loop until EOF
-		while (!inStream.eof() && inStream.good()) {
-			char buffer[1024];
-			std::streamsize readSize = sizeof(buffer);
-			try {
-				//try reading data from input file
-				inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
-			}
-			catch (std::ios_base::failure) {
-				//reading didn't work properly. store how many bytes were actually read
-				readSize = inStream.gcount();
-			}
-			//calculate checksum for buffer
-			for (std::streamsize n = 0; n < readSize; n++) {
-				s1 = (s1 + buffer[n]) % 65521;
-				s2 = (s2 + s1) % 65521;
-			}
-		}
-		//close file
-		inStream.close();
-		//build final checksum
-		return (s2 << 16) + s1;
-	}
-	return adler;
-}
-
 //Blob file format:
 //Offset         | Type     | Description
 //---------------+----------+-------------------------------------------
 //START          | char[8]  | magic number string "res2hbin"
 //08             | uint32_t | file format version number (currently 1)
 //12             | uint32_t | format flags or other crap for file (currently 0)
-//16             | uint32_t | number of directory and file entries following
+//16             | uint32_t | size of whole archive including checksum in bytes
+//20             | uint32_t | number of directory and file entries following
 //Then follows the directory:
-//20 + 00        | uint32_t | file entry #0, size of internal name INCLUDING null-terminating character
-//20 + 04        | char[]   | file entry #0, internal name (null-terminated)
-//20 + 04 + name | uint32_t | file entry #0, format flags for entry (currently 0)
-//20 + 08 + name | uint32_t | file entry #0, size of data
-//20 + 12 + name | uint32_t | file entry #0, absolute offset of data in file
-//20 + 16 + name | uint32_t | file entry #0, Adler-32 (RFC1950) checksum of data
+//24 + 00        | uint32_t | file entry #0, size of internal name INCLUDING null-terminating character
+//24 + 04        | char[]   | file entry #0, internal name (null-terminated)
+//24 + 04 + name | uint32_t | file entry #0, format flags for entry (currently 0)
+//24 + 08 + name | uint32_t | file entry #0, size of data
+//24 + 12 + name | uint32_t | file entry #0, absolute offset of data in file
+//24 + 16 + name | uint32_t | file entry #0, Adler-32 (RFC1950) checksum of data
 //Then follow the other directory entries.
 //Directly after the directory the data blocks begin.
 //END - 04       | uint32_t | Adler-32 (RFC1950) checksum of whole file up to this point
@@ -614,11 +574,14 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 		const uint32_t fileFlags = 0;
 		outStream.write(reinterpret_cast<const char *>(&fileVersion), sizeof(uint32_t));
 		outStream.write(reinterpret_cast<const char *>(&fileFlags), sizeof(uint32_t));
+		//add dummy archive size
+		uint32_t archiveSize = 0;
+		outStream.write(reinterpret_cast<const char *>(&archiveSize), sizeof(uint32_t));
 		//add number of directory entries
-		const uint32_t fileSize = fileList.size();
-		outStream.write(reinterpret_cast<const char *>(&fileSize), sizeof(uint32_t));
+		const uint32_t nrOfEntries = fileList.size();
+		outStream.write(reinterpret_cast<const char *>(&nrOfEntries), sizeof(uint32_t));
 		//skip through files calculating data start offset behind directory
-		size_t dataStart = 20;
+		size_t dataStart = 24;
 		std::vector<FileData>::const_iterator fdIt = fileList.cbegin();
 		while (fdIt != fileList.cend()) {
 			//calculate size of entry and to entry start adress
@@ -696,6 +659,10 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 			}
 			++fdIt;
 		}
+		//final archive size is current size + checksum. write size to the header now
+		archiveSize = (uint32_t)outStream.tellg() + sizeof(uint32_t);
+		outStream.seekg(16);
+		outStream.write(reinterpret_cast<const char *>(&archiveSize), sizeof(uint32_t));
         //close file
         outStream.close();
 		if (beVerbose) {

@@ -2,6 +2,8 @@
 
 #include <fstream>
 
+#include "res2hutils.hpp"
+
 
 std::map<std::string, Res2h::ResourceEntry> Res2h::resourceMap;
 
@@ -72,7 +74,7 @@ bool Res2h::loadArchive(const std::string & archivePath)
     if (inStream.is_open() && inStream.good()) {
 		size_t archiveOffset = 0;
 		//try to read magic bytes
-		unsigned char magicBytes[8] = {0};
+		unsigned char magicBytes[sizeof(RES2H_MAGIC_BYTES) - 1] = {0};
 		inStream.read(reinterpret_cast<char *>(&magicBytes), sizeof(magicBytes));
 		std::string magicString(reinterpret_cast<char *>(&magicBytes), sizeof(magicBytes));
 		if (magicString != RES2H_MAGIC_BYTES) {
@@ -103,9 +105,13 @@ bool Res2h::loadArchive(const std::string & archivePath)
 				throw Res2hException(std::string("loadArchive() - Failed to find archive in file \"") + archivePath + "\"!");
 			}
 		}
-		//magic bytes ok. control checksum. close first for calling checksum function
+		//magic bytes ok. get size of whole file.
+		inStream.seekg(sizeof(RES2H_MAGIC_BYTES) - 1 + 3 * sizeof(uint32_t), std::ios::beg);
+		uint32_t archiveSize = 0;
+		inStream.read(reinterpret_cast<char *>(&archiveSize), sizeof(uint32_t));
+		//control checksum. close first for calling checksum function
 		inStream.close();
-		uint32_t calculatedChecksum = calculateAdler32(archivePath);
+		uint32_t calculatedChecksum = calculateAdler32(archivePath, archiveSize - sizeof(uint32_t));
 		//re-open again
 		inStream.open(archivePath, std::ifstream::in | std::ifstream::binary);
 		//read checksum from end of file
@@ -139,14 +145,14 @@ bool Res2h::loadArchive(const std::string & archivePath)
 						//skip currently unused flags
 						inStream.seekg(sizeof(uint32_t), std::ios::cur);
 						//read size of data
-						inStream.read(reinterpret_cast<char *>(&temp.size), sizeof(uint32_t));
+						inStream.read(reinterpret_cast<char *>(&temp.dataSize), sizeof(uint32_t));
 						//read offset to start of data
 						inStream.read(reinterpret_cast<char *>(&temp.dataOffset), sizeof(uint32_t));
 						//read data checksum
 						inStream.read(reinterpret_cast<char *>(&temp.checksum), sizeof(uint32_t));
 						//add archive path and offset
 						temp.archivePath = archivePath;
-						temp.archiveOffset = archiveOffset;
+						temp.archiveStart = archiveOffset;
 						//add to map
 						resourceMap[temp.fileName] = temp;
 					}
@@ -194,42 +200,9 @@ void Res2h::releaseCache()
     }
 }
 
-uint32_t Res2h::calculateAdler32(const std::string & filePath, uint32_t adler)
+uint32_t Res2h::calculateChecksum(const std::string & filePath, const size_t dataSize, uint32_t adler)
 {
-	//open file
-	std::ifstream inStream;
-	inStream.open(filePath, std::ifstream::in | std::ifstream::binary);
-	if (inStream.is_open() && inStream.good()) {
-		//build checksum
-		uint32_t s1 = adler & 0xffff;
-		uint32_t s2 = (adler >> 16) & 0xffff;
-		//loop until EOF
-		while (!inStream.eof() && inStream.good()) {
-			char buffer[1024];
-			std::streamsize readSize = sizeof(buffer);
-			try {
-				//try reading data from input file
-				inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
-			}
-			catch (std::ios_base::failure) {
-				//reading didn't work properly. store how many bytes were actually read
-				readSize = inStream.gcount();
-			}
-			//calculate checksum for buffer
-			for (std::streamsize n = 0; n < readSize; n++) {
-				s1 = (s1 + buffer[n]) % 65521;
-				s2 = (s2 + s1) % 65521;
-			}
-		}
-		//close file
-		inStream.close();
-		//build final checksum
-		return (s2 << 16) + s1;
-	}
-	else {
-		throw Res2hException(std::string("calculateAdler32() - Failed to open file \"") + filePath + "\".");
-	}
-	return adler;
+	return calculateAdler32(filePath, dataSize, adler);
 }
 
 //-----------------------------------------------------------------------------

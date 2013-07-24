@@ -172,28 +172,31 @@ Binary archive format
         <td>12</td><td>uint32_t</td><td>format flags or other crap for file (currently 0)</td>
     </tr>
     <tr>
-        <td>16</td><td>uint32_t</td><td>number of directory and file entries following</td>
+        <td>16</td><td>uint32_t</td><td>size of whole archive in bytes</td>
+    </tr>
+    <tr>
+        <td>20</td><td>uint32_t</td><td>number of directory and file entries following</td>
     </tr>
     <tr>
         <td colspan="3">Then follows the directory:</td>
     </tr>
     <tr>
-        <td>20 + 00</td><td>uint32_t</td><td>file entry #0, size of internal name INCLUDING null-terminating character</td>
+        <td>24 + 00</td><td>uint32_t</td><td>file entry #0, size of internal name INCLUDING null-terminating character</td>
     </tr>
     <tr>
-        <td>20 + 04</td><td>char[]</td><td>file entry #0, internal name (null-terminated)</td>
+        <td>24 + 04</td><td>char[]</td><td>file entry #0, internal name (null-terminated)</td>
     </tr>
     <tr>
-        <td>20 + 04 + name</td><td>uint32_t</td><td>file entry #0, format flags for entry (currently 0)</td>
+        <td>24 + 04 + name</td><td>uint32_t</td><td>file entry #0, format flags for entry (currently 0)</td>
     </tr>
     <tr>
-        <td>20 + 08 + name</td><td>uint32_t</td><td>file entry #0, size of data</td>
+        <td>24 + 08 + name</td><td>uint32_t</td><td>file entry #0, size of data</td>
     </tr>
     <tr>
-        <td>20 + 12 + name</td><td>uint32_t</td><td>file entry #0, absolute offset of data in file</td>
+        <td>24 + 12 + name</td><td>uint32_t</td><td>file entry #0, absolute offset of data in file</td>
     </tr>
     <tr>
-        <td>20 + 16 + name</td><td>uint32_t</td><td>file entry #0, Adler-32 (RFC1950) checksum of data</td>
+        <td>24 + 16 + name</td><td>uint32_t</td><td>file entry #0, Adler-32 (RFC1950) checksum of data</td>
     </tr>
     <tr>
         <td colspan="3">Then follow the other directory entries</td>

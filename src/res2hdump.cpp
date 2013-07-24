@@ -46,7 +46,7 @@ void printUsage()
     std::cout << std::endl;
 	std::cout << "Usage: res2hdump <archive> [<outdir>] [options]" << std::endl;
 	std::cout << "Valid options:" << std::endl;
-	std::cout << "-f Recreate full path structure, creating directories as needed." << std::endl;
+	std::cout << "-f Recreate path structure, creating directories as needed." << std::endl;
 	std::cout << "-i Display information about the archive and files, but don't extract anything." << std::endl;
 	std::cout << "-v Be verbose." << std::endl;
     std::cout << "Examples:" << std::endl;
@@ -99,6 +99,13 @@ bool readArguments(int argc, const char * argv[])
 
 //-----------------------------------------------------------------------------
 
+bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path & archive, bool createPaths = true, bool dontExtract = false)
+{
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+
 int main(int argc, const char * argv[])
 {
 	printVersion();
@@ -126,6 +133,11 @@ int main(int argc, const char * argv[])
 			std::cout << "Error: Output must be a directory!" << std::endl;
 			return -2;
 		}
+	}
+
+	if (!dumpArchive(outFilePath, inFilePath, useFullPaths, informationOnly)) {
+			std::cout << "Failed to dump archive!" << std::endl;
+			return -3;
 	}
 
 	//profit!!!

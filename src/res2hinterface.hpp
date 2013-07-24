@@ -14,23 +14,28 @@ class Res2h
 public:
 	struct ResourceEntry
 	{
-		std::string fileName; //!<Name of file. If it starts with ":/" it is considered an internal file in a binary archive.
-		std::shared_ptr<unsigned char *> data; //!<File content.
-		size_t size; //!<Content size.
-		size_t dataOffset; //!<Offset in binary archive if any.
-        uint32_t checksum; //!<Checksum of raw stored data.
-        std::string archivePath; //!<Path on disk to binary archive file.
-		size_t archiveOffset; //!<Offset of the archive data in the archive file. Used when an archive is embedded e.g. in an executable.
+		std::string fileName; //!<Name of file. If it starts with ":/" it is considered an internal file in a binary res2h archive.
+		std::shared_ptr<unsigned char *> data; //!<Raw file content.
+		uint32_t dataSize; //!<Raw content size.
+		uint32_t dataOffset; //!<Raw content offset in binary res2h archive if any.
+        uint32_t checksum; //!<Checksum of raw content.
+        std::string archivePath; //!<Path on disk to binary res2h archive or to the file the archive is embeded in.
+		uint32_t archiveStart; //!<Offset of the archive data in the file (> 0 when an archive is embedded e.g. in an executable).
 	};
 
 private:
 	static std::map<std::string, ResourceEntry> resourceMap;
 
 public:
+	/*
+	Check if a file is actually an archive or contains an embedded archive.
+	\param[in] archivePath Archive path.
+	\return Returns true if archive can be openend and its magic bytes header is found.
+	*/
 	static bool isArchive(const std::string & archivePath);
 
 	/*!
-	Open archive file or embedded archive from disk and load directory into memory. You can add as many archives as you want.
+	Open archive file or file with embedded archive from disk and load directory into memory. You can add as many archives as you want.
 	\param[in] archivePath Archive path.
 	\note Archives can be appended to each other files using res2h: "res2h <ARCHIVE> <APPEND_TARGET> -a"
 	\return Returns true if opening and loading the archive directory worked.
@@ -40,7 +45,7 @@ public:
 	/*!
 	Load file content. Can be either a file on disk or a file in a binary archive.
 	\param[in] filePath Path to the file. If it start with ":/" it is considered to be in a binary archive.
-	\param[in] keepInCache Pass true to keep the resource in memory if you need it more than once.
+	\param[in] keepInCache Pass true to keep the resource in memory if you need it more than once. Memory archive data is never cached, because it is already in memory.
 	\return Returns a struct containing the data.
 	\note When loading data from a binary archive, load it with \loadArchive before.
 	*/
@@ -55,11 +60,12 @@ public:
 	/*
 	Create Adler-32 checksum from file. Builds checksum from start position till EOF.
 	\param[in] filePath Path to the file to build the checksum for.
+	\param[in] dataSize Optional. The size of the data to incorporate in the checksum. Pass 0 to scan whole file.
 	\param[in] adler Optional. Adler checksum from last run if you're using more than one file.
 	\return Returns the Adler-32 checksum for the file stream or the initial checksum upon failure.
 	\note Based on the sample code here: https://tools.ietf.org/html/rfc1950. This is not as safe as CRC-32 (see here: https://en.wikipedia.org/wiki/Adler-32), but should be totally sufficient for us.
 	*/
-	static uint32_t calculateAdler32(const std::string & filePath, uint32_t adler = 1);
+	static uint32_t calculateChecksum(const std::string & filePath, const size_t dataSize = 0, uint32_t adler = 1);
 };
 
 //-----------------------------------------------------------------------------
