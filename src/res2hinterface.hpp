@@ -27,14 +27,15 @@ private:
 	static std::map<std::string, ResourceEntry> resourceMap;
 
 public:
+	static bool isArchive(const std::string & archivePath);
+
 	/*!
-	Open binary archive from disk and load directory into memory. You can add as many archives as you want.
+	Open archive file or embedded archive from disk and load directory into memory. You can add as many archives as you want.
 	\param[in] archivePath Archive path.
-	\param[in] embeddedArchive Optional. Pass true if the archive data is appended to another file. It will be searched from the end of the file towards the start.
-	\note Archives can be appended to other files using res2h: "res2h <ARCHIVE> <APPEND_TARGET> -a"
+	\note Archives can be appended to each other files using res2h: "res2h <ARCHIVE> <APPEND_TARGET> -a"
 	\return Returns true if opening and loading the archive directory worked.
 	*/
-	static bool loadArchive(const std::string & archivePath, bool embeddedArchive = false);
+	static bool loadArchive(const std::string & archivePath);
 
 	/*!
 	Load file content. Can be either a file on disk or a file in a binary archive.
