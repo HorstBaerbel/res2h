@@ -14,8 +14,8 @@ class Res2h
 public:
 	struct ResourceEntry
 	{
-		std::string fileName; //!<Name of file. If it starts with ":/" it is considered an internal file in a binary res2h archive.
-		std::shared_ptr<unsigned char *> data; //!<Raw file content.
+		std::string filePath; //!<Name of file. If it starts with ":/" it is considered an internal file in a binary res2h archive.
+		std::shared_ptr<unsigned char> data; //!<Raw file content.
 		uint32_t dataSize; //!<Raw content size.
 		uint32_t dataOffset; //!<Raw content offset in binary res2h archive if any.
         uint32_t checksum; //!<Checksum of raw content.
@@ -45,11 +45,25 @@ public:
 	/*!
 	Load file content. Can be either a file on disk or a file in a binary archive.
 	\param[in] filePath Path to the file. If it start with ":/" it is considered to be in a binary archive.
-	\param[in] keepInCache Pass true to keep the resource in memory if you need it more than once. Memory archive data is never cached, because it is already in memory.
+	\param[in] keepInCache Optional. Pass true to keep the resource in memory if you need it more than once. Memory archive data is never cached, because it is already in memory.
+	\param[in] checkChecksum Optional. Pass true to check the calculated checksum of the data against the checksum stored in the archive.
 	\return Returns a struct containing the data.
 	\note When loading data from a binary archive, load it with \loadArchive before.
 	*/
-	static ResourceEntry loadFile(const std::string & filePath, bool keepInCache = false);
+	static ResourceEntry loadFile(const std::string & filePath, bool keepInCache = false, bool checkChecksum = true);
+
+	/*!
+	Return the number of resources currently in the map.
+	\return Returns the number of resources currently loaded.
+	*/
+	static size_t getNrOfResources();
+
+	/*!
+	Return a resource from the map.
+	\param[in] index The index of the resource to return.
+	\return Returns the index'th resource from the map.
+	*/
+	static ResourceEntry getResource(size_t index);
 
 	/*!
 	Release all cached data. Keeps directories in memory.

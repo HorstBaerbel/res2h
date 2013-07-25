@@ -581,7 +581,7 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 		const uint32_t nrOfEntries = fileList.size();
 		outStream.write(reinterpret_cast<const char *>(&nrOfEntries), sizeof(uint32_t));
 		//skip through files calculating data start offset behind directory
-		size_t dataStart = 24;
+		size_t dataStart = RES2H_OFFSET_DIR_START;
 		std::vector<FileData>::const_iterator fdIt = fileList.cbegin();
 		while (fdIt != fileList.cend()) {
 			//calculate size of entry and to entry start adress
@@ -661,7 +661,7 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 		}
 		//final archive size is current size + checksum. write size to the header now
 		archiveSize = (uint32_t)outStream.tellg() + sizeof(uint32_t);
-		outStream.seekg(16);
+		outStream.seekg(RES2H_OFFSET_ARCHIVE_SIZE);
 		outStream.write(reinterpret_cast<const char *>(&archiveSize), sizeof(uint32_t));
         //close file
         outStream.close();

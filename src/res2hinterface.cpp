@@ -94,8 +94,6 @@ bool Res2h::loadArchive(const std::string & archivePath)
 					//found. move to start position and store position
 					inStream.seekg(inStream.tellg() + magicPosition);
 					archiveOffset = (size_t)inStream.tellg();
-					//now move behind magic bytes
-					inStream.seekg(sizeof(magicBytes), std::ios::cur);
 					break;
 				}
 			}
@@ -106,7 +104,7 @@ bool Res2h::loadArchive(const std::string & archivePath)
 			}
 		}
 		//magic bytes ok. get size of whole file.
-		inStream.seekg(sizeof(RES2H_MAGIC_BYTES) - 1 + 3 * sizeof(uint32_t), std::ios::beg);
+		inStream.seekg(archiveOffset + RES2H_OFFSET_ARCHIVE_SIZE);
 		uint32_t archiveSize = 0;
 		inStream.read(reinterpret_cast<char *>(&archiveSize), sizeof(uint32_t));
 		//control checksum. close first for calling checksum function
@@ -115,21 +113,21 @@ bool Res2h::loadArchive(const std::string & archivePath)
 		//re-open again
 		inStream.open(archivePath, std::ifstream::in | std::ifstream::binary);
 		//read checksum from end of file
-		inStream.seekg(sizeof(uint32_t), std::ios::end);
+		inStream.seekg(archiveOffset + archiveSize - sizeof(uint32_t));
 		uint32_t fileChecksum = 0;
 		inStream.read(reinterpret_cast<char *>(&fileChecksum), sizeof(uint32_t));
 		if (fileChecksum == calculatedChecksum) {
 			//nice. checksum is ok. rewind and skip behind magic bytes
-			inStream.seekg(sizeof(magicBytes), std::ios::beg);
+			inStream.seekg(archiveOffset + RES2H_OFFSET_FILE_VERSION);
 			//check file version
 			uint32_t fileVersion = 0;
 			inStream.read(reinterpret_cast<char *>(&fileVersion), sizeof(uint32_t));
 			if (fileVersion <= RES2H_ARCHIVE_VERSION) {
-				//file version ok. skip currently unused flags
-				inStream.seekg(sizeof(uint32_t), std::ios::cur);
+				//file version ok. skip currently unused flags and archive size
+				inStream.seekg(archiveOffset + RES2H_OFFSET_NO_OF_FILES);
 				//read number of directory entries
 				uint32_t nrOfDirectoryEntries = 0;
-				inStream.read(reinterpret_cast<char *>(&fileVersion), sizeof(uint32_t));
+				inStream.read(reinterpret_cast<char *>(&nrOfDirectoryEntries), sizeof(uint32_t));
 				if (nrOfDirectoryEntries > 0) {
 					for (uint32_t i = 0; i < nrOfDirectoryEntries; ++i) {
 						//read directory to map
@@ -138,8 +136,10 @@ bool Res2h::loadArchive(const std::string & archivePath)
 						uint32_t sizeOfName = 0;
 						inStream.read(reinterpret_cast<char *>(&sizeOfName), sizeof(uint32_t));
 						//read name itself
-						temp.fileName.resize(sizeOfName);
-						inStream.read(reinterpret_cast<char *>(&temp.fileName[0]), sizeOfName - 1);
+						temp.filePath.resize(sizeOfName);
+						inStream.read(reinterpret_cast<char *>(&temp.filePath[0]), sizeOfName - 1);
+						//skip the null-terminator
+						inStream.seekg(1, std::ios::cur);
 						//clear data pointer
 						temp.data = nullptr;
 						//skip currently unused flags
@@ -154,7 +154,7 @@ bool Res2h::loadArchive(const std::string & archivePath)
 						temp.archivePath = archivePath;
 						temp.archiveStart = archiveOffset;
 						//add to map
-						resourceMap[temp.fileName] = temp;
+						resourceMap[temp.filePath] = temp;
 					}
 					//close file
 					inStream.close();
@@ -181,10 +181,79 @@ bool Res2h::loadArchive(const std::string & archivePath)
 	return false;
 }
 
-Res2h::ResourceEntry Res2h::loadFile(const std::string & filePath, bool keepInCache)
+Res2h::ResourceEntry Res2h::loadFile(const std::string & filePath, bool keepInCache, bool checkChecksum)
 {
 	ResourceEntry temp;
+    //find file in the map
+    std::map<std::string, ResourceEntry>::iterator rmIt = resourceMap.begin();
+    while (rmIt != resourceMap.end()) {
+        if (rmIt->second.filePath == filePath) {
+			//found. check if still in memory.
+			temp = rmIt->second;
+			if (temp.data) {
+				//data is still valid. return it.
+				return temp;
+			}
+			//data needs to be loaded. try to open file
+			std::ifstream inStream;
+			inStream.open(temp.archivePath, std::ifstream::in | std::ifstream::binary);
+			if (inStream.is_open() && inStream.good()) {
+				//opened ok. move to data offset
+				inStream.seekg(temp.archiveStart + temp.dataOffset);
+				//allocate data
+				temp.data = std::shared_ptr<unsigned char>(new unsigned char[temp.dataSize], [](unsigned char *p) { delete[] p; });
+				//try reading data
+				try {
+					inStream.read(reinterpret_cast<char *>(temp.data.get()), temp.dataSize);
+				}
+				catch (std::ios_base::failure) { /*reading didn't work properly. salvage what we can.*/ }
+				//check how many bytes were actually read
+				if (inStream.gcount() != temp.dataSize) {
+					throw Res2hException(std::string("loadFile() - Failed to read \"") + filePath + "\" from archive.");
+				}
+				//calculate checksum if user wants to
+				if (checkChecksum) {
+					if (temp.checksum != calculateAdler32(temp.data.get(), temp.dataSize)) {
+						throw Res2hException(std::string("loadFile() - Bad checksum for \"") + filePath + "\".");
+					}
+				}
+				//if the user wants to cache the data, add it to our map, else just return it and it will be free eventually
+				if (keepInCache) {
+					rmIt->second.data = temp.data;
+				}
+				return temp;
+			}
+			else {
+				throw Res2hException(std::string("loadFile() - Failed to open archive \"") + temp.archivePath + "\" for reading.");
+			}
+        }
+        else {
+            ++rmIt;
+        }
+    }
 	return temp;
+}
+
+size_t Res2h::getNrOfResources()
+{
+	return resourceMap.size();
+}
+
+Res2h::ResourceEntry Res2h::getResource(size_t index)
+{
+	if (index < resourceMap.size()) {
+		std::map<std::string, ResourceEntry>::const_iterator rmIt = resourceMap.cbegin();
+		advance(rmIt, index);
+		if (rmIt != resourceMap.end()) {
+			return rmIt->second;
+		}
+		else {
+			throw Res2hException(std::string("getFile() - Index ") + std::to_string((_ULonglong)index) + " out of bounds! Map has " + std::to_string((_ULonglong)resourceMap.size()) + "files.");
+		}
+	}
+	else {
+		throw Res2hException(std::string("getFile() - Index ") + std::to_string((_ULonglong)index) + " out of bounds! Map has " + std::to_string((_ULonglong)resourceMap.size()) + "files.");
+	}
 }
 
 void Res2h::releaseCache()
