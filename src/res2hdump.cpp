@@ -101,7 +101,31 @@ bool readArguments(int argc, const char * argv[])
 
 bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path & archive, bool createPaths = true, bool dontExtract = false)
 {
-	return true;
+	if (Res2h::loadArchive(archive.string())) {
+		//try dumping data
+		if (dontExtract) {
+			for (size_t i = 0; i < Res2h::getNrOfResources(); ++i) {
+				try {
+					//read resource entry
+					Res2h::ResourceEntry entry = Res2h::getResource(i);
+					//dump to console
+					std::cout << "File #" << i << " \"" << entry.filePath << "\"" << std::endl;
+					std::cout << "Archive file: \"" << entry.archivePath << "\", archive offset: " << entry.archiveStart << " bytes" << std::endl;
+					std::cout << "Data offset: " << entry.dataOffset << " bytes" << std::endl;
+					std::cout << "Data size: " << entry.dataSize << " bytes" << std::endl;
+					std::cout << "Checksum: " << std::hex << std::showbase << entry.checksum << std::endl;					
+				}
+				catch (Res2hException e) {
+					std::cout << "Error reading resource #" << i << e.whatString() << std::endl;
+					return false;
+				}
+			}
+			return true;
+		}
+		else {
+		}
+	}
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -122,7 +146,7 @@ int main(int argc, const char * argv[])
 		return -2;
 	}
 	//check if argument 1 is a file
-	if (!boost::filesystem::is_directory(inFilePath)) {
+	if (boost::filesystem::is_directory(inFilePath)) {
 		std::cout << "Error: Input must be a file!" << std::endl;
 		return -2;
 	}
