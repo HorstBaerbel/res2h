@@ -25,7 +25,7 @@ uint32_t calculateAdler32(const std::string & filePath, const size_t dataSize, u
 		//loop until EOF or dataSize reached
 		std::streamsize rollingSize = 0;
 		while (!inStream.eof() && inStream.good()) {
-			char buffer[1024];
+			unsigned char buffer[1024];
 			std::streamsize readSize = sizeof(buffer);
 			try {
 				//try reading data from input file
@@ -34,15 +34,15 @@ uint32_t calculateAdler32(const std::string & filePath, const size_t dataSize, u
 			catch (std::ios_base::failure) { /*reading didn't work properly. salvage what we can.*/ }
 			//store how many bytes were actually read
 			readSize = inStream.gcount();
-			//clamp to dataSize
-			if (rollingSize + readSize > dataSize) {
+			//clamp to dataSize if the caller wants to checksum only part of the file
+			if (dataSize > 0 && rollingSize + readSize > dataSize) {
 				readSize = dataSize - rollingSize;
 			}
 			//calculate checksum for buffer
-			adler = calculateAdler32(buffer, (size_t)readSize, adler);
+			adler = calculateAdler32((const unsigned char*)&buffer, (size_t)readSize, adler);
 			//update size already read
 			rollingSize += readSize;
-			if (rollingSize >= dataSize) {
+			if (dataSize > 0 && rollingSize >= dataSize) {
 				break;
 			}
 		}
