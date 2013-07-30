@@ -111,9 +111,9 @@ bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path 
                 Res2h::ResourceEntry entry = Res2h::getResource(i);
                 //dump to console
                 std::cout << "File #" << i << " \"" << entry.filePath << "\"" << std::endl;
-                std::cout << "Archive file: \"" << entry.archivePath << "\", archive offset: " << entry.archiveStart << " bytes" << std::endl;
-                std::cout << "Data offset: " << entry.dataOffset << " bytes" << std::endl;
-                std::cout << "Data size: " << entry.dataSize << " bytes" << std::endl;
+                std::cout << "Archive file: \"" << entry.archivePath << "\", archive offset: " << std::dec << entry.archiveStart << " bytes" << std::endl;
+                std::cout << "Data offset: " << std::dec << entry.dataOffset << " bytes" << std::endl;
+                std::cout << "Data size: " << std::dec << entry.dataSize << " bytes" << std::endl;
                 std::cout << "Checksum: " << std::hex << std::showbase << entry.checksum << std::endl;					
                 if (!dontExtract) {
                     //if the caller wants to dump data, do it
@@ -144,7 +144,7 @@ bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path 
                                 outStream.write(reinterpret_cast<const char *>(file.data.get()), file.dataSize);
                                 //check if data has been written
                                 if ((size_t)outStream.tellp() != file.dataSize) {
-                                    std::cout << "Failed to read all data for resource #" << i << std::endl;
+                                    std::cout << "Failed to read all data for resource #" << std::dec << i << std::endl;
                                 }
                                 //close file
                                 outStream.close();
@@ -158,12 +158,12 @@ bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path 
                         }
                     }
                     catch (Res2hException e) {
-                        std::cout << "Error loading resource " << i << " from archive - " << e.whatString() << std::endl;
+                        std::cout << "Error loading resource " << std::dec << i << " from archive - " << e.whatString() << std::endl;
                     }
                 } //if(!dontExtract)
             }
             catch (Res2hException e) {
-                std::cout << "Error reading resource #" << i << " - " << e.whatString() << std::endl;
+                std::cout << "Error reading resource #" << std::dec << i << " - " << e.whatString() << std::endl;
             }
         }
         return true;
