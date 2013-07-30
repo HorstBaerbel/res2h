@@ -1,5 +1,6 @@
 #include "res2hinterface.hpp"
 
+#include <climits>
 #include <fstream>
 
 #include "res2hutils.hpp"
@@ -248,11 +249,11 @@ Res2h::ResourceEntry Res2h::getResource(size_t index)
 			return rmIt->second;
 		}
 		else {
-			throw Res2hException(std::string("getFile() - Index ") + std::to_string((_ULonglong)index) + " out of bounds! Map has " + std::to_string((_ULonglong)resourceMap.size()) + "files.");
+			throw Res2hException(std::string("getFile() - Index ") + std::to_string((long long)index) + " out of bounds! Map has " + std::to_string((long long)resourceMap.size()) + "files.");
 		}
 	}
 	else {
-		throw Res2hException(std::string("getFile() - Index ") + std::to_string((_ULonglong)index) + " out of bounds! Map has " + std::to_string((_ULonglong)resourceMap.size()) + "files.");
+		throw Res2hException(std::string("getFile() - Index ") + std::to_string((long long)index) + " out of bounds! Map has " + std::to_string((long long)resourceMap.size()) + "files.");
 	}
 }
 

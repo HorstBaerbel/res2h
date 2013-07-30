@@ -97,6 +97,7 @@ target_link_libraries(res2h ${R2H_LIBRARIES})
 
 #add dump executable to project
 add_executable(res2hdump ${R2H_DUMP_SOURCES} ${R2H_DUMP_HEADERS})
+target_link_libraries(res2hdump ${R2H_LIBRARIES})
 
 #-------------------------------------------------------------------------------
 #special properties for windows builds

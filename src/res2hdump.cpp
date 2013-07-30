@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <fstream>
 #include <boost/filesystem.hpp>
 
 #include "res2hinterface.hpp"
