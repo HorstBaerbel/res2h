@@ -68,7 +68,7 @@ bool readArguments(int argc, const char * argv[])
 			useFullPaths = true;
 			pastFiles = true;
 		}
-		if (argument == "-i") {
+		else if (argument == "-i") {
 			informationOnly = true;
 			pastFiles = true;
 		}
@@ -121,10 +121,24 @@ bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path 
                         Res2h::ResourceEntry file = Res2h::loadFile(entry.filePath);
                         if (file.data && file.dataSize > 0) {
                             //worked. now dump file data to disk. construct output path
-                            boost::filesystem::path outpath = destination / entry.filePath.erase(0, 2);
+                            boost::filesystem::path subPath = entry.filePath.erase(0, 2);
+                            boost::filesystem::path outPath = destination / subPath;
+                            if (createPaths) {
+                                boost::filesystem::path dirPath = destination;
+                                boost::filesystem::path::const_iterator sdIt = subPath.begin();
+                                while (sdIt->filename() != subPath.filename()) {
+                                    //build output path with subdirectory
+                                    dirPath /= *sdIt;
+                                    //check if if exists
+                                    if (!boost::filesystem::exists(dirPath)) {
+                                        boost::filesystem::create_directory(dirPath);
+                                    }
+                                    ++sdIt;
+                                }
+                            }
                             //try to open output file
                             std::ofstream outStream;
-                            outStream.open(outpath.string(), std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+                            outStream.open(outPath.string(), std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
                             if (outStream.is_open() && outStream.good()) {
                                 //write data to disk
                                 outStream.write(reinterpret_cast<const char *>(file.data.get()), file.dataSize);
@@ -136,7 +150,7 @@ bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path 
                                 outStream.close();
                             }
                             else {
-                                std::cout << "Failed to open file \"" << outpath.string() << "\" for writing!" << std::endl;
+                                std::cout << "Failed to open file \"" << outPath.string() << "\" for writing!" << std::endl;
                             }
                         }
                         else {
@@ -146,7 +160,7 @@ bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path 
                     catch (Res2hException e) {
                         std::cout << "Error loading resource " << i << " from archive - " << e.whatString() << std::endl;
                     }
-                }
+                } //if(!dontExtract)
             }
             catch (Res2hException e) {
                 std::cout << "Error reading resource #" << i << " - " << e.whatString() << std::endl;
