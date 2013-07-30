@@ -103,75 +103,80 @@ bool readArguments(int argc, const char * argv[])
 
 bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path & archive, bool createPaths = true, bool dontExtract = false)
 {
-	if (Res2h::loadArchive(archive.string())) {
-        //dump archive
-        for (size_t i = 0; i < Res2h::getNrOfResources(); ++i) {
-            try {
-                //read resource entry
-                Res2h::ResourceEntry entry = Res2h::getResource(i);
-                //dump to console
-                std::cout << "File #" << i << " \"" << entry.filePath << "\"" << std::endl;
-                std::cout << "Archive file: \"" << entry.archivePath << "\", archive offset: " << std::dec << entry.archiveStart << " bytes" << std::endl;
-                std::cout << "Data offset: " << std::dec << entry.dataOffset << " bytes" << std::endl;
-                std::cout << "Data size: " << std::dec << entry.dataSize << " bytes" << std::endl;
-                std::cout << "Checksum: " << std::hex << std::showbase << entry.checksum << std::endl;					
-                if (!dontExtract) {
-                    //if the caller wants to dump data, do it
-                    try {
-                        Res2h::ResourceEntry file = Res2h::loadFile(entry.filePath);
-                        if (file.data && file.dataSize > 0) {
-                            //worked. now dump file data to disk. construct output path
-                            boost::filesystem::path subPath = entry.filePath.erase(0, 2);
-                            boost::filesystem::path outPath = destination / subPath;
-                            if (createPaths) {
-                                boost::filesystem::path dirPath = destination;
-                                boost::filesystem::path::const_iterator sdIt = subPath.begin();
-                                while (sdIt->filename() != subPath.filename()) {
-                                    //build output path with subdirectory
-                                    dirPath /= *sdIt;
-                                    //check if if exists
-                                    if (!boost::filesystem::exists(dirPath)) {
-                                        boost::filesystem::create_directory(dirPath);
+    try {
+        if (Res2h::loadArchive(archive.string())) {
+            //dump archive
+            for (size_t i = 0; i < Res2h::getNrOfResources(); ++i) {
+                try {
+                    //read resource entry
+                    Res2h::ResourceEntry entry = Res2h::getResource(i);
+                    //dump to console
+                    std::cout << "File #" << std::dec << i << " \"" << entry.filePath << "\"" << std::endl;
+                    std::cout << "Archive file: \"" << entry.archivePath << "\", archive offset: " << std::dec << entry.archiveStart << " bytes" << std::endl;
+                    std::cout << "Data offset: " << std::dec << entry.dataOffset << " bytes" << std::endl;
+                    std::cout << "Data size: " << std::dec << entry.dataSize << " bytes" << std::endl;
+                    std::cout << "Checksum: " << std::hex << std::showbase << entry.checksum << std::endl;					
+                    if (!dontExtract) {
+                        //if the caller wants to dump data, do it
+                        try {
+                            Res2h::ResourceEntry file = Res2h::loadFile(entry.filePath);
+                            if (file.data && file.dataSize > 0) {
+                                //worked. now dump file data to disk. construct output path
+                                boost::filesystem::path subPath = entry.filePath.erase(0, 2);
+                                boost::filesystem::path outPath = destination / subPath;
+                                if (createPaths) {
+                                    boost::filesystem::path dirPath = destination;
+                                    boost::filesystem::path::const_iterator sdIt = subPath.begin();
+                                    while (sdIt->filename() != subPath.filename()) {
+                                        //build output path with subdirectory
+                                        dirPath /= *sdIt;
+                                        //check if if exists
+                                        if (!boost::filesystem::exists(dirPath)) {
+                                            boost::filesystem::create_directory(dirPath);
+                                        }
+                                        ++sdIt;
                                     }
-                                    ++sdIt;
                                 }
-                            }
-                            //try to open output file
-                            std::ofstream outStream;
-                            outStream.open(outPath.string(), std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
-                            if (outStream.is_open() && outStream.good()) {
-                                //write data to disk
-                                outStream.write(reinterpret_cast<const char *>(file.data.get()), file.dataSize);
-                                //check if data has been written
-                                if ((size_t)outStream.tellp() != file.dataSize) {
-                                    std::cout << "Failed to read all data for resource #" << std::dec << i << std::endl;
+                                //try to open output file
+                                std::ofstream outStream;
+                                outStream.open(outPath.string(), std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+                                if (outStream.is_open() && outStream.good()) {
+                                    //write data to disk
+                                    outStream.write(reinterpret_cast<const char *>(file.data.get()), file.dataSize);
+                                    //check if data has been written
+                                    if ((size_t)outStream.tellp() != file.dataSize) {
+                                        std::cout << "Failed to read all data for resource #" << std::dec << i << std::endl;
+                                    }
+                                    //close file
+                                    outStream.close();
                                 }
-                                //close file
-                                outStream.close();
+                                else {
+                                    std::cout << "Failed to open file \"" << outPath.string() << "\" for writing!" << std::endl;
+                                }
                             }
                             else {
-                                std::cout << "Failed to open file \"" << outPath.string() << "\" for writing!" << std::endl;
+                                std::cout << "Failed to get data for resource #" << i << " from archive!" << std::endl;
                             }
                         }
-                        else {
-                            std::cout << "Failed to get data for resource #" << i << " from archive!" << std::endl;
+                        catch (Res2hException e) {
+                            std::cout << "Error loading resource " << std::dec << i << " from archive - " << e.whatString() << std::endl;
                         }
-                    }
-                    catch (Res2hException e) {
-                        std::cout << "Error loading resource " << std::dec << i << " from archive - " << e.whatString() << std::endl;
-                    }
-                } //if(!dontExtract)
+                    } //if(!dontExtract)
+                }
+                catch (Res2hException e) {
+                    std::cout << "Error reading resource #" << std::dec << i << " - " << e.whatString() << std::endl;
+                }
             }
-            catch (Res2hException e) {
-                std::cout << "Error reading resource #" << std::dec << i << " - " << e.whatString() << std::endl;
-            }
+            return true;
         }
-        return true;
-	}
-    else {
-        std::cout << "Failed to open archive " << archive.string() << std::endl;
+        else {
+            std::cout << "Failed to open archive " << archive << std::endl;
+        }
     }
-	return false;
+    catch (Res2hException e) {
+        std::cout << "Error: " << e.whatString() << std::endl;
+    }
+    return false;
 }
 
 //-----------------------------------------------------------------------------
