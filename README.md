@@ -1,12 +1,14 @@
 res2h
 ========
 
-**tl;dr:** Load binary data from arbitrary files and dump it to a raw hex C/C++ array for compiling into your software, or bundle the data from all the files in a binary archive. It is inspired by [bin2h](http://code.google.com/p/bin2h/) with added functionality.
+**tl;dr:** Load binary data from arbitrary files and convert it to a raw hex C/C++ array for compiling into your software, or bundle the data from all the files in a binary archive. It is inspired by [bin2h](http://code.google.com/p/bin2h/) with added functionality.
 
 **res2h** can convert binary data from files to a raw hex arrays in .c/.cpp source files which you can then include in your project and compile them into the executable. It can also create a common header that lets you access all the converted arrays with one include. If you don't want your data to be loaded into memory res2h also provides the possiblility to create one binary archive containing all the files which you can then access via the "Res2h" class provided in seperate headers. You can also embed this archive in your executable, so you only have one file, and access it like you would with any other archive on disk.
 It should compile and work at least in Windows, Ubuntu and Raspbian.
 
 **res2hdump** is a tool that lets you dump information and/or files from a binary res2h archive or an archive embedded in another file, e.g. executable. It also serves as an example on how to use the "Res2h" class contained in the "res2hinterface" files.
+
+**run_test** is a script that lets you test res2h and res2hdump after compiling. It uses res2h with some options to create C++ files and a binary archive from example files in /test. It then unpacks this archive to /results again.
 
 License
 ========
@@ -23,19 +25,17 @@ cmake .
 make
 </pre>
 
-G++ 4.7 (for C++11), boost-filesystem and boost-system are needed to compile "res2h" and "res2hdump", but not the "res2hinterface". For installing G++ 4.7 see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
+G++ 4.7 (for C++11), boost-filesystem and boost-system (> v1.49) are needed to compile "res2h" and "res2hdump" (but not the "res2hinterface"). For installing G++ 4.7 see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
 Install the boost packages with:
 ```
 sudo apt-get install libboost-filesystem-dev
 sudo apt-get install libboost-system-dev
-sudo apt-get install libboost-filesystem<VERSION>
-sudo apt-get install libboost-filesystem<VERSION>
 ```
 or
 ```
-sudo apt-get install libboost-dev
+sudo apt-get install libboost-all-dev
 ```
-for to get all of boost.
+to get all of boost.
 
 Usage - res2h
 ========
@@ -216,22 +216,22 @@ Usage - res2hdump
 ========
 
 ```
-res2hdump <archive> <outdir> [options]
+res2hdump <archive> [<outdir>] [options]
 ```
 
 **Valid options:**
-- -f Recreate full path structure, creating directories as needed.
+- -f Recreate path structure, creating directories as needed.
 - -i Display information about the archive and files, but don't extract anything.
 - -v Be verbose.
 
 **Examples:**
 - Display information about the archive: ```res2hdump ./resources/data.bin -i```
-- Extract all files from an archive with full paths: ```res2hdump ./resources/data.bin ./resources -f```
+- Extract all files from an archive with subdirectories: ```res2hdump ./resources/data.bin ./resources -f```
 - Extract files from embedded archive: ```res2hdump ./resources/program.exe ./resources```
 
 FAQ
 ========
-- **Q:** The C++ interface is much better... **A:** Yes. It got more love. C++ makes stuff much easier to implement. I figured the C interface would be used on low-power systems anyway and thus should be slimmer.
+- **Q:** The C++ interface is much better... **A:** Yes. It got more love. C++ makes stuff much easier to implement. I figured the C interface would be used on low-power systems anyway and mostly there a bin2h-style system is used.
 
 I found a bug or have suggestion
 ========
