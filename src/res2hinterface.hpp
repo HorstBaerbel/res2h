@@ -21,10 +21,15 @@ public:
         uint32_t checksum; //!<Checksum of raw content.
         std::string archivePath; //!<Path on disk to binary res2h archive or to the file the archive is embeded in.
 		uint32_t archiveStart; //!<Offset of the archive data in the file (> 0 when an archive is embedded e.g. in an executable).
+
+        ResourceEntry() : dataSize(0), dataOffset(0), checksum(0), archiveStart(0) {}
 	};
 
 private:
 	static std::map<std::string, ResourceEntry> resourceMap;
+
+    static ResourceEntry loadFileFromDisk(const std::string & filePath);
+    static ResourceEntry loadFileFromArchive(const Res2h::ResourceEntry & entry);
 
 public:
 	/*
