@@ -4,10 +4,10 @@
 // Do this version number update as the very last commit for the new release version.
 #define RES2H_VERSION_MAJOR       0
 #define RES2H_VERSION_MINOR        3
-#define RES2H_VERSION_MAINTENANCE  0
+#define RES2H_VERSION_MAINTENANCE  1
 #define RES2H_VERSION_REVISION     0
-#define RES2H_VERSION_STRING "0.3.0.0 - built " __DATE__ " - " __TIME__
-#define RES2H_RESOURCE_VERSION_STRING "0,3,0,0\0"
+#define RES2H_VERSION_STRING "0.3.1.0 - built " __DATE__ " - " __TIME__
+#define RES2H_RESOURCE_VERSION_STRING "0,3,1,0\0"
 
 #define RES2H_RESOURCE_VERSION RES2H_VERSION_MAJOR,RES2H_VERSION_MINOR,RES2H_VERSION_MAINTENANCE,RES2H_VERSION_REVISION
 

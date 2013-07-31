@@ -191,7 +191,7 @@ Res2h::ResourceEntry Res2h::loadFileFromDisk(const std::string & filePath)
     if (inStream.is_open() && inStream.good()) {
         //opened ok. check file size
         inStream.seekg(0, std::ios::end);
-        std::streampos fileSize = inStream.tellg();
+        size_t fileSize = (size_t)inStream.tellg();
         inStream.seekg(0);
         if (fileSize > 0) {
             //allocate data
