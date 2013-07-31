@@ -44,9 +44,8 @@ boost::filesystem::path naiveUncomplete(boost::filesystem::path const path, boos
         if (base.has_root_path()) {
             return path;
         } else {
-            typedef boost::filesystem::path::const_iterator path_iterator;
-            path_iterator path_it = path.begin();
-            path_iterator base_it = base.begin();
+            auto path_it = path.begin();
+            auto base_it = base.begin();
             while ( path_it != path.end() && base_it != base.end() ) {
                 if (*path_it != *base_it) break;
                 ++path_it; ++base_it;
@@ -243,8 +242,7 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 	}
 	//iterate through source directory searching for files
 	const boost::filesystem::directory_iterator dirEnd;
-	boost::filesystem::directory_iterator fileIt(inPath);
-	while (fileIt != dirEnd) {
+	for (boost::filesystem::directory_iterator fileIt(inPath); fileIt != dirEnd; ++fileIt) {
 		boost::filesystem::path filePath = (*fileIt).path();
 		if (!boost::filesystem::is_directory(filePath)) {
 			if (beVerbose) {
@@ -294,13 +292,11 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 			//add file to list
 			files.push_back(temp);
 		}
-		++fileIt;
 	}
 	//does the user want subdirectories?
 	if (recurse) {
 		//iterate through source directory again searching for directories
-		boost::filesystem::directory_iterator dirIt(inPath);
-		while (dirIt != dirEnd) {
+		for (boost::filesystem::directory_iterator dirIt(inPath); dirIt != dirEnd; ++dirIt) {
 			boost::filesystem::path dirPath = (*dirIt).path();
 			if (boost::filesystem::is_directory(dirPath)) {
 				if (beVerbose) {
@@ -311,7 +307,6 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 				//add returned result to file list
 				files.insert(files.end(), subFiles.cbegin(), subFiles.cend());
 			}
-            ++dirIt;
 		}
 	}
 	//return result
@@ -410,12 +405,10 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const boost::fil
 		//add #pragma to only include once
 		outStream << "#pragma once" << std::endl << std::endl;
 		//add all files
-		std::vector<FileData>::const_iterator fdIt = fileList.cbegin();
-		while (fdIt != fileList.cend()) {
+		for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend(); ++fdIt) {
 			//add size and data variable
 			outStream << "extern const size_t " << fdIt->sizeVariableName << ";" << std::endl;
 			outStream << "extern const unsigned char " << fdIt->dataVariableName << "[];" << std::endl << std::endl;
-            ++fdIt;
 		}
 		//if we want utilities, add array
 		if (addUtilityFunctions) {
@@ -475,8 +468,7 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 			//add files
 			outStream << "const Res2hEntry res2hVector[res2hVector_size] = {" << std::endl;
 			outStream << "    "; //first indent
-			std::vector<FileData>::const_iterator fdIt = fileList.cbegin();
-			while (fdIt != fileList.cend()) {
+			for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend();) {
 				outStream << "{\"" << fdIt->internalName << "\", " << fdIt->sizeVariableName << ", " << fdIt->dataVariableName << "}";
 				//was this the last entry?
 				++fdIt;
@@ -493,8 +485,7 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 			//add files to vector
 			outStream << "const std::vector<const Res2hEntry> res2hVector = {" << std::endl;			
 			outStream << "    "; //first indent
-			std::vector<FileData>::const_iterator fdIt = fileList.cbegin();
-			while (fdIt != fileList.cend()) {
+			for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend();) {
 				outStream << "{\"" << fdIt->internalName << "\", " << fdIt->sizeVariableName << ", " << fdIt->dataVariableName << "}";
 				//was this the last entry?
 				++fdIt;
@@ -509,8 +500,7 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 			//add files to map
 			outStream << "const std::map<const std::string, const Res2hEntry> res2hMap = {" << std::endl;
 			outStream << "    ";
-			fdIt = fileList.cbegin();
-			while (fdIt != fileList.cend()) {
+			for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend();) {
 				outStream << "std::pair<const std::string, const Res2hEntry>(\"" << fdIt->internalName << "\", {\"" << fdIt->internalName << "\", " << fdIt->sizeVariableName << ", " << fdIt->dataVariableName << "})";
 				//was this the last entry?
 				++fdIt;
@@ -582,15 +572,12 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 		outStream.write(reinterpret_cast<const char *>(&nrOfEntries), sizeof(uint32_t));
 		//skip through files calculating data start offset behind directory
 		size_t dataStart = RES2H_OFFSET_DIR_START;
-		std::vector<FileData>::const_iterator fdIt = fileList.cbegin();
-		while (fdIt != fileList.cend()) {
+		for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend(); ++fdIt) {
 			//calculate size of entry and to entry start adress
 			dataStart += 20 + fdIt->internalName.size() + 1;
-			++fdIt;
 		}
         //add directory for all files
-		fdIt = fileList.cbegin();
-		while (fdIt != fileList.cend()) {
+		for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend(); ++fdIt) {
 			//add size of name
 			const uint32_t nameSize = fdIt->internalName.size() + 1;
 			outStream.write(reinterpret_cast<const char *>(&nameSize), sizeof(uint32_t));
@@ -614,11 +601,9 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 			}
 			//now add size of this entrys data to start offset for next data block
 			dataStart += fdIt->size;
-			++fdIt;
 		}
-		//add data for all files
-		fdIt = fileList.cbegin();
-		while (fdIt != fileList.cend()) {
+		//add data for all files		
+		for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend(); ++fdIt) {
 			//try to open file
 			std::ifstream inStream;
 			inStream.open(fdIt->inPath.string(), std::ifstream::in | std::ifstream::binary);
@@ -657,7 +642,6 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 				outStream.close();
 				return false;
 			}
-			++fdIt;
 		}
 		//final archive size is current size + checksum. write size to the header now
 		archiveSize = (uint32_t)outStream.tellg() + sizeof(uint32_t);
@@ -840,13 +824,11 @@ int main(int argc, const char * argv[])
 		}
 		else {
 			//no. convert files to .c/.cpp. loop through list, converting files
-			std::vector<FileData>::iterator fdIt = fileList.begin();
-			while (fdIt != fileList.cend()) {
+			for (auto fdIt = fileList.begin(); fdIt != fileList.cend(); ++fdIt) {
 				if (!convertFile(*fdIt, commonHeaderFilePath)) {
 					std::cout << "Error: Failed to convert all files. Aborting!" << std::endl;
 					return -4;
 				}
-				++fdIt;
 			}
 			//do we need to write a header file?
 			if (!commonHeaderFilePath.empty()) {

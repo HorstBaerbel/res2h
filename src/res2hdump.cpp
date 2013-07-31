@@ -127,15 +127,13 @@ bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path 
                                 boost::filesystem::path outPath = destination / subPath;
                                 if (createPaths) {
                                     boost::filesystem::path dirPath = destination;
-                                    boost::filesystem::path::const_iterator sdIt = subPath.begin();
-                                    while (sdIt->filename() != subPath.filename()) {
+                                    for (auto sdIt = subPath.begin(); sdIt->filename() != subPath.filename(); ++sdIt) {
                                         //build output path with subdirectory
                                         dirPath /= *sdIt;
                                         //check if if exists
                                         if (!boost::filesystem::exists(dirPath)) {
                                             boost::filesystem::create_directory(dirPath);
                                         }
-                                        ++sdIt;
                                     }
                                 }
                                 //try to open output file

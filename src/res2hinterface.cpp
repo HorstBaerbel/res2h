@@ -59,7 +59,7 @@ bool Res2h::isArchive(const std::string & archivePath)
 bool Res2h::loadArchive(const std::string & archivePath)
 {
     //check if there are entries for this archive already in the map and delete them
-    std::map<std::string, ResourceEntry>::iterator rmIt = resourceMap.begin();
+    auto rmIt = resourceMap.begin();
     while (rmIt != resourceMap.end()) {
         if (rmIt->second.archivePath == archivePath) {
             //'tis from this archive. erase.
@@ -248,8 +248,7 @@ Res2h::ResourceEntry Res2h::loadFile(const std::string & filePath, bool keepInCa
 {
 	ResourceEntry temp;
     //find file in the map
-    std::map<std::string, ResourceEntry>::iterator rmIt = resourceMap.begin();
-    while (rmIt != resourceMap.end()) {
+    for (auto rmIt = resourceMap.begin(); rmIt != resourceMap.end(); ++rmIt) {
         if (rmIt->second.filePath == filePath) {
 			//found. check if still in memory.
 			temp = rmIt->second;
@@ -278,8 +277,6 @@ Res2h::ResourceEntry Res2h::loadFile(const std::string & filePath, bool keepInCa
             }
             return temp;
         }
-        //try next file
-        ++rmIt;
     }
 	//when we get here the file was not in the map. try to load it
 	if (filePath.find_first_of(":/") == 0) {
@@ -291,7 +288,7 @@ Res2h::ResourceEntry Res2h::loadFile(const std::string & filePath, bool keepInCa
 		temp = loadFileFromDisk(temp.filePath);
 		//loaded. if the user wants to cache the data, add it to our map, else just return it and it will be freed eventually
 		if (keepInCache) {
-			rmIt->second.data = temp.data;
+            resourceMap[temp.filePath] = temp;
 		}
 	}
 	return temp;
@@ -305,7 +302,7 @@ size_t Res2h::getNrOfResources()
 Res2h::ResourceEntry Res2h::getResource(size_t index)
 {
 	if (index < resourceMap.size()) {
-		std::map<std::string, ResourceEntry>::const_iterator rmIt = resourceMap.cbegin();
+		auto rmIt = resourceMap.cbegin();
 		advance(rmIt, index);
 		if (rmIt != resourceMap.end()) {
 			return rmIt->second;
@@ -322,7 +319,7 @@ Res2h::ResourceEntry Res2h::getResource(size_t index)
 void Res2h::releaseCache()
 {
     //erase all allocated data in resource map
-    std::map<std::string, ResourceEntry>::iterator rmIt = resourceMap.begin();
+    auto rmIt = resourceMap.begin();
     while (rmIt != resourceMap.end()) {
         if (rmIt->second.data) {
             //shared_ptr is valid, so there is allocated data. release our reference to it.
