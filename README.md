@@ -13,7 +13,7 @@ It should compile and work at least in Windows, Ubuntu and Raspbian.
 License
 ========
 
-[BSD-3-Clause](http://opensource.org/licenses/BSD-3-Clause), see LICENSE.md
+[BSD-2-Clause](http://opensource.org/licenses/BSD-2-Clause), see LICENSE.md
 
 Building
 ========
