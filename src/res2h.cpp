@@ -414,8 +414,10 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const boost::fil
 		//add includes for C++
 		if (!useCConstructs) {
 			outStream << "#include <string>" << std::endl;
-			outStream << "#include <vector>" << std::endl;
-			outStream << "#include <map>" << std::endl << std::endl;
+			if (addUtilityFunctions) {
+			    outStream << "#include <map>" << std::endl;
+            }
+            outStream << std::endl;
 		}
 		//add all files
 		for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend(); ++fdIt) {
@@ -436,14 +438,13 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const boost::fil
 			outStream << "    const size_t size;" << std::endl;
 			outStream << "    const unsigned char * data;" << std::endl;
 			outStream << "};" << std::endl << std::endl;
-			//add list declaration depending on wether C or C++
-			if (useCConstructs) {
-				outStream << "extern const size_t res2hVector_size;" << std::endl;
-				outStream << "extern const Res2hEntry res2hVector[];" << std::endl;
-			}
-			else {
-				outStream << "extern const std::vector<const Res2hEntry> res2hVector;" << std::endl;
-				outStream << "extern const std::map<const std::string, const Res2hEntry> res2hMap;" << std::endl;
+			//add list holding files
+            outStream << "extern const size_t res2hNrOfFiles;" << std::endl;
+			outStream << "extern const Res2hEntry res2hFiles[];" << std::endl << std::endl;
+			if (!useCConstructs) {
+                //add additional std::map if C++
+                outStream << "typedef const std::map<const std::string, const Res2hEntry> res2hMapType;" << std::endl;
+				outStream << "extern res2hMapType res2hMap;" << std::endl;
 			}
 		}
 		//close file
@@ -475,31 +476,28 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 		//include header file
 		outStream << "#include \"" << relativePath.string() << "\"" << std::endl << std::endl;
 		//begin data arrays. switch depending wether C or C++
-		if (useCConstructs) {
-			//add size
-			outStream << "const size_t res2hVector_size = " << fileList.size() << ";" << std::endl;
-			//add files
-			outStream << "const Res2hEntry res2hVector[res2hVector_size] = {" << std::endl;
-			outStream << "    "; //first indent
+        outStream << "const size_t res2hNrOfFiles = " << fileList.size() << ";" << std::endl;
+        //add files
+        outStream << "const Res2hEntry res2hFiles[res2hNrOfFiles] = {" << std::endl;
+        outStream << "    "; //first indent
+        for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend();) {
+            outStream << "{\"" << fdIt->internalName << "\", " << fdIt->sizeVariableName << ", " << fdIt->dataVariableName << "}";
+            //was this the last entry?
+            ++fdIt;
+            if (fdIt != fileList.cend()) {
+                //no. add comma.
+                outStream << ",";
+                //add break after every entry and add indent again
+                outStream << std::endl << "    ";
+            }
+        }
+        outStream << std::endl << "};" << std::endl;
+		if (!useCConstructs) {
+			//add files to map
+			outStream << std::endl << "res2hMapType::value_type mapTemp[] = {" << std::endl;
+			outStream << "    ";
 			for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend();) {
-				outStream << "{\"" << fdIt->internalName << "\", " << fdIt->sizeVariableName << ", " << fdIt->dataVariableName << "}";
-				//was this the last entry?
-				++fdIt;
-				if (fdIt != fileList.cend()) {
-					//no. add comma.
-					outStream << ",";
-					//add break after every entry and add indent again
-					outStream << std::endl << "    ";
-				}
-			}
-			outStream << std::endl << "};" << std::endl;
-		}
-		else {
-			//add files to vector
-			outStream << "const std::vector<const Res2hEntry> res2hVector = {" << std::endl;			
-			outStream << "    "; //first indent
-			for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend();) {
-				outStream << "{\"" << fdIt->internalName << "\", " << fdIt->sizeVariableName << ", " << fdIt->dataVariableName << "}";
+				outStream << "std::make_pair(\"" << fdIt->internalName << "\", res2hFiles[" << (fdIt - fileList.cbegin()) << "])";
 				//was this the last entry?
 				++fdIt;
 				if (fdIt != fileList.cend()) {
@@ -510,21 +508,8 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 				}
 			}
 			outStream << std::endl << "};" << std::endl << std::endl;
-			//add files to map
-			outStream << "const std::map<const std::string, const Res2hEntry> res2hMap = {" << std::endl;
-			outStream << "    ";
-			for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend();) {
-				outStream << "std::pair<const std::string, const Res2hEntry>(\"" << fdIt->internalName << "\", {\"" << fdIt->internalName << "\", " << fdIt->sizeVariableName << ", " << fdIt->dataVariableName << "})";
-				//was this the last entry?
-				++fdIt;
-				if (fdIt != fileList.cend()) {
-					//no. add comma.
-					outStream << ",";
-					//add break after every entry and add indent again
-					outStream << std::endl << "    ";
-				}
-			}
-			outStream << std::endl << "};" << std::endl;
+            //create map
+            outStream << "res2hMapType res2hMap(mapTemp, mapTemp + sizeof mapTemp / sizeof mapTemp[0]);" << std::endl;
 		}
 		//close file
 		outStream.close();
