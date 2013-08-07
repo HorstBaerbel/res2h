@@ -354,11 +354,16 @@ bool convertFile(FileData & fileData, const boost::filesystem::path & commonHead
 					//read byte from source
 					unsigned char dataByte;
 					inStream.read((char *)&dataByte, 1);
+					//check if we have actually read something
+					if (inStream.gcount() != 1 || inStream.eof()) {
+						//we failed to read. break the read loop and close the file.
+						break;
+					}
 					//write to destination in hex with a width of 2 and '0' as padding
                     //we do not use showbase as it doesn't work with zero values
                     outStream << "0x" << std::setw(2) << std::setfill('0') << std::hex << (unsigned int)dataByte;
 					//was this the last character?
-					if (!inStream.eof()) {
+					if (!inStream.eof() && fileData.size > (size_t)inStream.tellg()) {
 						//no. add comma.
 						outStream << ",";
 						//add break after 10 bytes and add indent again
