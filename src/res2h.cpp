@@ -22,6 +22,7 @@ bool useRecursion = false;
 bool useC = false;
 bool createBinary = false;
 bool appendFile = false;
+bool combineResults = false;
 boost::filesystem::path commonHeaderFilePath;
 boost::filesystem::path utilitiesFilePath;
 boost::filesystem::path inFilePath;
@@ -105,6 +106,7 @@ void printUsage()
 	std::cout << "-c Use .c files and arrays for storing the data definitions, else" << std::endl << "    uses .cpp files and std::vector/std::map." << std::endl;
 	std::cout << "-h <headerfile> Puts all declarations in a common \"headerfile\" using \"extern\"" << std::endl << "    and includes that header file in the source files." << std::endl;
 	std::cout << "-u <sourcefile> Create utility functions and arrays in a .c/.cpp file." << std::endl << "    Only makes sense in combination with -h" << std::endl;
+    std::cout << "-1 Combine all converted files into one big .c/.cpp file (use with -u)." << std::endl;
     std::cout << "-b Compile binary archive outfile containing all infile(s). For reading in your" << std::endl << "    software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs." << std::endl;
 	std::cout << "-a Append infile to outfile. Can be used to append an archive to an executable." << std::endl;
 	std::cout << "-v Be verbose." << std::endl;
@@ -124,23 +126,48 @@ bool readArguments(int argc, const char * argv[])
 		//check what it is
 		if (argument == "-a") {
             if (!commonHeaderFilePath.empty() || !utilitiesFilePath.empty()) {
-                std::cout << "Error: -a can not be combined with -h or -u!" << std::endl;
+                std::cout << "Error: Option -a can not be combined with -h or -u!" << std::endl;
 				return false;
             }
 			else if (createBinary) {
-                std::cout << "Error: -a can not be combined with -b!" << std::endl;
+                std::cout << "Error: Option -a can not be combined with -b!" << std::endl;
+				return false;
+			}
+            else if (combineResults) {
+                std::cout << "Error: Option -a can not be combined with -1!" << std::endl;
 				return false;
 			}
 			appendFile = true;
 			pastFiles = true;
 		}
+        else if (argument == "-1") {
+            //-u must be used for this to work. check if specified
+            for(int j = 1; j < argc; ++j) {
+                //read argument from list
+                std::string argument = argv[j];
+                if (argument == "-u") {
+                    combineResults = true;
+                    pastFiles = true;
+                    break;
+                }
+            }
+            if (!combineResults) {
+                //-u not specified. complain to user.
+                std::cout << "Error: Option -1 has to be combined with -u!" << std::endl;
+                return false;
+            }
+        }
         else if (argument == "-b") {
             if (!commonHeaderFilePath.empty() || !utilitiesFilePath.empty()) {
-                std::cout << "Error: -b can not be combined with -h or -u!" << std::endl;
+                std::cout << "Error: Option -b can not be combined with -h or -u!" << std::endl;
 				return false;
             }
 			else if (appendFile) {
-                std::cout << "Error: -b can not be combined with -a!" << std::endl;
+                std::cout << "Error: Option -b can not be combined with -a!" << std::endl;
+				return false;
+			}
+            else if (combineResults) {
+                std::cout << "Warning: Creating binary archive. Option -1 ignored!" << std::endl;
 				return false;
 			}
             createBinary = true;
@@ -160,11 +187,11 @@ bool readArguments(int argc, const char * argv[])
 		}
 		else if (argument == "-h") {
             if (createBinary) {
-                std::cout << "Error: -h can not be combined with -b!" << std::endl;
+                std::cout << "Error: Option -h can not be combined with -b!" << std::endl;
 				return false;
             }
 			else if (appendFile) {
-                std::cout << "Error: -h can not be combined with -a!" << std::endl;
+                std::cout << "Error: Option -h can not be combined with -a!" << std::endl;
 				return false;
 			}
 			//try getting next argument as header file name
@@ -175,18 +202,18 @@ bool readArguments(int argc, const char * argv[])
                 }
 			}
 			else {
-				std::cout << "Error: -h specified, but no file name found!" << std::endl;
+				std::cout << "Error: Option -h specified, but no file name found!" << std::endl;
 				return false;
 			}
 			pastFiles = true;
 		}
 		else if (argument == "-u") {
             if (createBinary) {
-                std::cout << "Error: -u can not be combined with -b!" << std::endl;
+                std::cout << "Error: Option -u can not be combined with -b!" << std::endl;
 				return false;
             }
 			else if (appendFile) {
-                std::cout << "Error: -u can not be combined with -a!" << std::endl;
+                std::cout << "Error: Option -u can not be combined with -a!" << std::endl;
 				return false;
 			}
 			//try getting next argument as utility file name
@@ -197,11 +224,11 @@ bool readArguments(int argc, const char * argv[])
                 }
 			}
 			else {
-				std::cout << "Error: -u specified, but no file name found!" << std::endl;
+				std::cout << "Error: Option -u specified, but no file name found!" << std::endl;
 				return false;
 			}
 			if (!utilitiesFilePath.empty() && commonHeaderFilePath.empty()) {
-				std::cout << "Warning: -u makes not much sense without -h..." << std::endl;
+				std::cout << "Warning: -u does not make much sense without -h..." << std::endl;
 			}
 			pastFiles = true;
 		}
@@ -315,7 +342,7 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 	return files;
 }
 
-bool convertFile(FileData & fileData, const boost::filesystem::path & commonHeaderPath)
+bool convertFile(FileData & fileData, const boost::filesystem::path & commonHeaderPath, std::ofstream & outStream = std::ofstream(), bool addHeader = true)
 {
 	if (boost::filesystem::exists(fileData.inPath)) {
 		//try to open the input file
@@ -329,18 +356,32 @@ bool convertFile(FileData & fileData, const boost::filesystem::path & commonHead
 			inStream.seekg(0, std::ios::end);
 			fileData.size = (size_t)inStream.tellg();
 			inStream.seekg(0);
-			//try opening the output file. truncate it when it exists
-			std::ofstream outStream;
-			outStream.open(fileData.outPath.string(), std::ofstream::out | std::ofstream::trunc);
+            //check if the caller passed and output stream and use that
+            bool closeOutStream = false;
+            if (!outStream.is_open() || !outStream.good()) {
+                if (!fileData.outPath.empty()) {
+                    //try opening the output stream. truncate it when it exists
+                    outStream.open(fileData.outPath.string(), std::ofstream::out | std::ofstream::trunc);
+                }
+                else {
+                    std::cout << "Error: No output stream passed, but output path for \"" << fileData.inPath.filename().string() << "\" is empty! Skipping." << std::endl;
+                    return false;
+                }
+                closeOutStream = true;
+            }
+            //now write to stream
 			if (outStream.is_open() && outStream.good()) {
-				//add message 
-				outStream << "//this file was auto-generated from \"" << fileData.inPath.filename().string() << "\" by res2h" << std::endl << std::endl;
-				//add header include
-				if (!commonHeaderPath.empty()) {
-                    //common header path must be relative to destination directory
-                    boost::filesystem::path relativeHeaderPath = naiveUncomplete(commonHeaderPath, fileData.outPath);
-                    outStream << "#include \"" << relativeHeaderPath.generic_string() << "\"" << std::endl << std::endl;
-				}
+                //check if caller want to add a header
+                if (addHeader) {
+                    //add message 
+                    outStream << "//this file was auto-generated from \"" << fileData.inPath.filename().string() << "\" by res2h" << std::endl << std::endl;
+                    //add header include
+                    if (!commonHeaderPath.empty()) {
+                        //common header path must be relative to destination directory
+                        boost::filesystem::path relativeHeaderPath = naiveUncomplete(commonHeaderPath, fileData.outPath);
+                        outStream << "#include \"" << relativeHeaderPath.generic_string() << "\"" << std::endl << std::endl;
+                    }
+                }
 				//create names for variables
 				fileData.dataVariableName = fileData.outPath.filename().stem().string() + "_data";
 				fileData.sizeVariableName = fileData.outPath.filename().stem().string() + "_size";
@@ -373,9 +414,11 @@ bool convertFile(FileData & fileData, const boost::filesystem::path & commonHead
 					}
 				}
 				//close curly braces
-				outStream << std::endl << "};"<< std::endl;
+				outStream << std::endl << "};" << std::endl << std::endl;
 				//close files
-				outStream.close();
+                if (closeOutStream) {
+				    outStream.close();
+                }
 				inStream.close();
 				if (beVerbose) {
 					std::cout << " - succeeded." << std::endl;
@@ -460,7 +503,7 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const boost::fil
 	return true;
 }
 
-bool createUtilities(const std::vector<FileData> & fileList, const boost::filesystem::path & utilitiesPath, const boost::filesystem::path & commonHeaderPath, bool useCConstructs = false)
+bool createUtilities(std::vector<FileData> & fileList, const boost::filesystem::path & utilitiesPath, const boost::filesystem::path & commonHeaderPath, bool useCConstructs = false, bool addFileData = false)
 {
 	//try opening the output file. truncate it when it exists
 	std::ofstream outStream;
@@ -475,6 +518,16 @@ bool createUtilities(const std::vector<FileData> & fileList, const boost::filesy
 		boost::filesystem::path relativePath = naiveUncomplete(commonHeaderPath, utilitiesPath);
 		//include header file
 		outStream << "#include \"" << relativePath.string() << "\"" << std::endl << std::endl;
+        //if the data should go to this file too, add it
+        if (addFileData) {
+            for (auto fdIt = fileList.begin(); fdIt != fileList.cend(); ++fdIt) {
+                if (!convertFile(*fdIt, commonHeaderFilePath, outStream, false)) {
+                    std::cout << "Error: Failed to convert all files. Aborting!" << std::endl;
+                    outStream.close();
+                    return false;
+                }
+            }
+        }
 		//begin data arrays. switch depending wether C or C++
         outStream << "const size_t res2hNrOfFiles = " << fileList.size() << ";" << std::endl;
         //add files
@@ -835,7 +888,7 @@ int main(int argc, const char * argv[])
 				}
 				//do we need to create utilities?
 				if (!utilitiesFilePath.empty()) {
-					if (!createUtilities(fileList, utilitiesFilePath, commonHeaderFilePath, useC)) {
+                    if (!createUtilities(fileList, utilitiesFilePath, commonHeaderFilePath, useC, combineResults)) {
 						return -6;
 					}
 				}

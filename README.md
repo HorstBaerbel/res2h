@@ -49,6 +49,7 @@ res2h <infile/indir> <outfile/outdir> [options]
 - -c Use .c files and arrays for storing the data definitions, else uses .cpp files and std::vector/std::map.
 - -h <headerfile> Puts all declarations in the file "headerfile" using "extern" and includes that header file in the source files.
 - -u <sourcefile> Create utility functions and arrays in a .c/.cpp file. Only makes sense in combination with -h.
+- -1 Combine all converted files into one big .c/.cpp file (use together with -u).
 - -b Compile binary archive outfile containing all infile(s). For reading in your software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs.
 - -a Append infile to outfile. Can be used to append an archive to an executable.
 - -v Be verbose.
@@ -56,6 +57,7 @@ res2h <infile/indir> <outfile/outdir> [options]
 **Examples:**
 - Convert a single file: ```res2h ./lenna.png ./resources/lenna_png.cpp```
 - Convert all files in a directory, create a common header and utilities: ```res2h ./data ./resources -s -h resources.h -u resources.cpp```
+- Convert all files in a directory, create a common header and utilities, combine all data in resources.cpp: ```res2h ./data ./resources -s -1 -h resources.h -u resources.cpp```
 - Convert data to a binary archive: ```res2h ./data ./resources/data.bin -b```
 - Append an archive to an executable: ```res2h ./resources/data.bin ./program.exe -a```
 
