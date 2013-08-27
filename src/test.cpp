@@ -20,11 +20,21 @@ struct FileData {
 	size_t size;
 };
 
-const boost::filesystem::path inDir = "../test";
-const boost::filesystem::path outDir = "../results";
+#ifdef WIN32
+    boost::filesystem::path inDir = "../test";
+    boost::filesystem::path outDir = "../results";
+    const boost::filesystem::path res2hPath = "..\\Release\\res2h.exe";
+    const boost::filesystem::path res2hdumpPath = "..\\Release\\res2hdump.exe";
+#else
+    boost::filesystem::path inDir = "./test";
+    boost::filesystem::path outDir = "./results";
+    const boost::filesystem::path res2hPath = "./res2h";
+    const boost::filesystem::path res2hdumpPath = "./res2hdump";
+#endif
+
 const boost::filesystem::path outFile = "test.bin";
-const std::string res2hOptions = "-s -b"; //recurse and build binary archive
 const std::string res2hdumpOptions = "-f"; //dump using full paths
+const std::string res2hOptions = "-s -b"; //recurse and build binary archive
 
 //-----------------------------------------------------------------------------
 
@@ -32,7 +42,7 @@ void printHeader()
 {
 	std::cout << "res2h unit test " << RES2H_VERSION_STRING << std::endl;
     std::cout << "Reading all files from " << inDir << std::endl;
-    std::cout << "and packing it to " << outDir << "/" << outFile << "." << std::endl;
+    std::cout << "and packing them to " << outDir / outFile << "." << std::endl;
     std::cout << "Then unpacking all files again and comparing binary data." << std::endl << std::endl;
 }
 
@@ -171,7 +181,7 @@ bool compareAtoB(const boost::filesystem::path & a, const boost::filesystem::pat
 		return true;
 	}
 	else {
-		std::cout << "Error: Failed to open file \"" << a << "\" for reading!" << std::endl;
+		std::cout << "Error: Failed to open file " << a << " for reading!" << std::endl;
 	}
 	return false;
 }
@@ -180,46 +190,64 @@ int main(int argc, const char * argv[])
 {
 	printHeader();
 
-    std::cout << "Running in " << boost::filesystem::current_path() << std::endl;
+    std::cout << "TEST: Running in " << boost::filesystem::current_path() << std::endl;
 
     //remove all files in results directory
-    std::cout << "Deleting and re-creating " << outDir << "." << std::endl;
-    boost::filesystem::remove_all(outDir);
+    std::cout << "TEST: Deleting and re-creating " << outDir << "." << std::endl;
+    try {
+        boost::filesystem::remove_all(outDir);
+    }
+    catch (boost::filesystem::filesystem_error e) {
+        //directory was probably not there...
+        std::cout << "Warning: " << e.what() << std::endl;
+    }
+    //and re-create the directory
     boost::filesystem::create_directory(outDir);
+
+    //check if the input/output directories exist now
+    try {
+        inDir = boost::filesystem::canonical(inDir);
+        outDir = boost::filesystem::canonical(outDir);
+    }
+    catch (boost::filesystem::filesystem_error e) {
+        //directory was probably not there...
+        std::cout << "Error: " << e.what() << std::endl;
+        return -1;
+    }
 
     //get all files from source directory
     std::vector<FileData> fileList = getFileDataFrom(inDir, outDir, inDir, true);
 
     std::stringstream command;
     //run res2h creating binary archive
-    std::cout << "Running res2h to create binary archive." << std::endl << std::endl;    
-    command << "..\\Debug\\res2h.exe " << inDir << " " << (outDir / outFile) << " " << res2hOptions;
-    if (system(command.str().c_str()) != 0) {
-        //an error occured running res2h
-        std::cout << "The call \"" << command << "\" failed!" << std::endl;
-        return -1;
-    }
-
-    command.str(std::string());
-    //run res2hdump, unpacking all files
-    std::cout << "Running res2hdump to unpack binary archive." << std::endl << std::endl;
-    command << "..\\Debug\\res2hdump.exe " << (outDir / outFile) << " " << outDir << " " << res2hdumpOptions;
+    std::cout << "TEST: Running res2h to create binary archive." << std::endl << std::endl;    
+    command << res2hPath << " " << inDir << " " << (outDir / outFile) << " " << res2hOptions;
     if (system(command.str().c_str()) != 0) {
         //an error occured running res2h
         std::cout << "The call \"" << command << "\" failed!" << std::endl;
         return -2;
     }
 
+    command.str(std::string());
+    //run res2hdump, unpacking all files
+    std::cout << "TEST: Running res2hdump to unpack binary archive." << std::endl << std::endl;
+    command << res2hdumpPath << " " << (outDir / outFile) << " " << outDir << " " << res2hdumpOptions;
+    if (system(command.str().c_str()) != 0) {
+        //an error occured running res2h
+        std::cout << "The call \"" << command << "\" failed!" << std::endl;
+        return -3;
+    }
+
     //compare binary
-    std::cout << "Comparing files binary." << std::endl << std::endl;
+    std::cout << std::endl << "TEST: Comparing files binary." << std::endl << std::endl;
     for (auto fdIt = fileList.begin(); fdIt != fileList.cend(); ++fdIt) {
         if (!compareAtoB(fdIt->inPath, fdIt->outPath)) {
             std::cout << "Error: Binary comparison of " << fdIt->inPath << " to " << fdIt->outPath << " failed!" << std::endl;
-            return -3;
+            return -4;
         }
     }
 
-    std::cout << "Succeeded!" << std::endl;
+    std::cout << "unittest succeeded!" << std::endl;
 
     return 0;
 }

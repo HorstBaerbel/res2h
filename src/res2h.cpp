@@ -28,6 +28,8 @@ boost::filesystem::path utilitiesFilePath;
 boost::filesystem::path inFilePath;
 boost::filesystem::path outFilePath;
 
+std::ofstream badOfStream; //we need this later as a default parameter...
+
 //-----------------------------------------------------------------------------
 
 //This is based on the example code found here: https://svn.boost.org/trac/boost/ticket/1976
@@ -342,7 +344,7 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 	return files;
 }
 
-bool convertFile(FileData & fileData, const boost::filesystem::path & commonHeaderPath, std::ofstream & outStream = std::ofstream(), bool addHeader = true)
+bool convertFile(FileData & fileData, const boost::filesystem::path & commonHeaderPath, std::ofstream & outStream = badOfStream, bool addHeader = true)
 {
 	if (boost::filesystem::exists(fileData.inPath)) {
 		//try to open the input file
@@ -897,7 +899,7 @@ int main(int argc, const char * argv[])
 	} //if (!appendFile) {
 
 	//profit!!!
-	std::cout << "Succeeded." << std::endl;
+	std::cout << "res2h succeeded." << std::endl;
 	
 	return 0;
 }

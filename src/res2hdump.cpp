@@ -215,7 +215,7 @@ int main(int argc, const char * argv[])
 	}
 
 	//profit!!!
-	std::cout << "Succeeded." << std::endl;
+	std::cout << "res2hdump succeeded." << std::endl;
 	
 	return 0;
 }

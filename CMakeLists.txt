@@ -109,8 +109,8 @@ add_executable(res2hdump ${R2H_DUMP_SOURCES} ${R2H_DUMP_HEADERS})
 target_link_libraries(res2hdump ${R2H_LIBRARIES})
 
 #add unit test executable to project
-add_executable(test ${R2H_UNITTEST_SOURCES} ${R2H_UNITTEST_HEADERS})
-target_link_libraries(test ${R2H_LIBRARIES})
+add_executable(unittest ${R2H_UNITTEST_SOURCES} ${R2H_UNITTEST_HEADERS})
+target_link_libraries(unittest ${R2H_LIBRARIES})
 
 #-------------------------------------------------------------------------------
 #special properties for windows builds
