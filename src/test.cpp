@@ -221,20 +221,20 @@ int main(int argc, const char * argv[])
     std::stringstream command;
     //run res2h creating binary archive
     std::cout << "TEST: Running res2h to create binary archive." << std::endl << std::endl;    
-    command << res2hPath << " " << inDir << " " << (outDir / outFile) << " " << res2hOptions;
+    command << res2hPath.string() << " " << inDir << " " << (outDir / outFile) << " " << res2hOptions;
     if (system(command.str().c_str()) != 0) {
         //an error occured running res2h
-        std::cout << "The call \"" << command << "\" failed!" << std::endl;
+        std::cout << "The call \"" << command.str() << "\" failed!" << std::endl;
         return -2;
     }
 
     command.str(std::string());
     //run res2hdump, unpacking all files
     std::cout << "TEST: Running res2hdump to unpack binary archive." << std::endl << std::endl;
-    command << res2hdumpPath << " " << (outDir / outFile) << " " << outDir << " " << res2hdumpOptions;
+    command << res2hdumpPath.string() << " " << (outDir / outFile) << " " << outDir << " " << res2hdumpOptions;
     if (system(command.str().c_str()) != 0) {
         //an error occured running res2h
-        std::cout << "The call \"" << command << "\" failed!" << std::endl;
+        std::cout << "The call \"" << command.str() << "\" failed!" << std::endl;
         return -3;
     }
 
