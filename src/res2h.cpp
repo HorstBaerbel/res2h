@@ -388,8 +388,8 @@ bool convertFile(FileData & fileData, const boost::filesystem::path & commonHead
 				fileData.dataVariableName = fileData.outPath.filename().stem().string() + "_data";
 				fileData.sizeVariableName = fileData.outPath.filename().stem().string() + "_size";
 				//add size and data variable
-				outStream << "const size_t " << fileData.sizeVariableName << " = " << fileData.size << ";" << std::endl;
-				outStream << "const unsigned char " << fileData.dataVariableName << "[" << fileData.size << "] = {" << std::endl;
+				outStream << "const size_t " << fileData.sizeVariableName << " = " << std::dec << fileData.size << ";" << std::endl;
+				outStream << "const unsigned char " << fileData.dataVariableName << "[" << std::dec << fileData.size << "] = {" << std::endl;
 				outStream << "    "; //first indent
 				//now add content
 				size_t breakCounter = 0;
