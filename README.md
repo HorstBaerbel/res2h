@@ -25,7 +25,7 @@ cmake .
 make
 </pre>
 
-G++ 4.7 (for C++11), boost-filesystem and boost-system (> v1.49) are needed to compile "res2h" and "res2hdump" (but not the "res2hinterface"). For installing G++ 4.7 see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
+Visual Studio 2013, G++ 4.7 or Clang 3.3 (for C++11), boost-filesystem and boost-system (> v1.49) are needed to compile "res2h" and "res2hdump" (but not the "res2hinterface"). For installing G++ 4.7 see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
 Install the boost packages with:
 ```
 sudo apt-get install libboost-filesystem-dev
