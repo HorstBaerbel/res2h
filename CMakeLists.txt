@@ -29,6 +29,13 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s") #strip binary
 endif()
 
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+    #set up compiler flags for Clang
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2") #support C++11 for std::, optimize
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2")  #-s = strip binary
+endif()
+
+
 #-------------------------------------------------------------------------------
 #add include directories
 
