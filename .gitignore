@@ -214,6 +214,18 @@ pip-log.txt
 #Mr Developer
 .mr.developer.cfg
 
+#############
+## CMake
+#############
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+#################
+## Make
+#################
+Makefile
+
 # Test result directory
 result/
 results/

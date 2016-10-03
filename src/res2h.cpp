@@ -2,15 +2,24 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <boost/filesystem.hpp>
+#include <vector>
+#include <algorithm>
+
+#if defined(__GNUC__) || defined(__clang__)
+	#include <experimental/filesystem>
+	namespace FS_NAMESPACE = std::experimental::filesystem;
+#elif defined(_MSC_VER)
+	#include <filesystem>
+	namespace FS_NAMESPACE = std::tr2::sys;
+#endif
 
 #include "res2h.h"
 #include "res2hutils.hpp"
 
 
 struct FileData {
-	boost::filesystem::path inPath;
-	boost::filesystem::path outPath;
+	FS_NAMESPACE::path inPath;
+	FS_NAMESPACE::path outPath;
 	std::string internalName;
 	std::string dataVariableName;
 	std::string sizeVariableName;
@@ -23,10 +32,10 @@ bool useC = false;
 bool createBinary = false;
 bool appendFile = false;
 bool combineResults = false;
-boost::filesystem::path commonHeaderFilePath;
-boost::filesystem::path utilitiesFilePath;
-boost::filesystem::path inFilePath;
-boost::filesystem::path outFilePath;
+FS_NAMESPACE::path commonHeaderFilePath;
+FS_NAMESPACE::path utilitiesFilePath;
+FS_NAMESPACE::path inFilePath;
+FS_NAMESPACE::path outFilePath;
 
 std::ofstream badOfStream; //we need this later as a default parameter...
 
@@ -35,7 +44,7 @@ std::ofstream badOfStream; //we need this later as a default parameter...
 //This is based on the example code found here: https://svn.boost.org/trac/boost/ticket/1976
 //but changed to not return a trailing ".." when paths only differ in their file name.
 //The function still seems to be missing in boost as of 1.54.0.
-boost::filesystem::path naiveUncomplete(boost::filesystem::path const path, boost::filesystem::path const base)
+FS_NAMESPACE::path naiveUncomplete(FS_NAMESPACE::path const path, FS_NAMESPACE::path const base)
 {
     if (path.has_root_path()) {
         if (path.root_path() != base.root_path()) {
@@ -53,7 +62,7 @@ boost::filesystem::path naiveUncomplete(boost::filesystem::path const path, boos
                 if (*path_it != *base_it) break;
                 ++path_it; ++base_it;
             }
-            boost::filesystem::path result;
+            FS_NAMESPACE::path result;
 			//check if we're at the filename of the base path already
             if (*base_it != base.filename()) {
 				//add trailing ".." from path to base, but only if we're not already at the filename of the base path
@@ -70,22 +79,22 @@ boost::filesystem::path naiveUncomplete(boost::filesystem::path const path, boos
 	return path;
 }
 
-bool makeCanonical(boost::filesystem::path & result, const boost::filesystem::path & path)
+bool makeCanonical(FS_NAMESPACE::path & result, const FS_NAMESPACE::path & path)
 {
     //if we use canonical the file must exits, else we get an exception.
     try {
-        result = boost::filesystem::canonical(path);
+        result = FS_NAMESPACE::canonical(path);
     }
     catch(...) {
         //an error occurred. this maybe because the file is not there yet. try without the file name
         try {
-            result = boost::filesystem::canonical(boost::filesystem::path(path).remove_filename());
+            result = FS_NAMESPACE::canonical(FS_NAMESPACE::path(path).remove_filename());
             //ok. this worked. add file name again
             result /= path.filename();
         }
         catch (...) {
             //hmm. didn't work. tell the user. at least the path should be there...
-            std::cout << "The path \"" << boost::filesystem::path(path).remove_filename().string() << "\" couldn't be found. Please create it." << std::endl;
+            std::cout << "The path \"" << FS_NAMESPACE::path(path).remove_filename().string() << "\" couldn't be found. Please create it." << std::endl;
             return false;
         }
     }
@@ -199,7 +208,7 @@ bool readArguments(int argc, const char * argv[])
 			//try getting next argument as header file name
 			i++;
 			if (i < argc && argv[i] != nullptr) {
-                if (!makeCanonical(commonHeaderFilePath, boost::filesystem::path(argv[i]))) {
+                if (!makeCanonical(commonHeaderFilePath, FS_NAMESPACE::path(argv[i]))) {
                     return false;
                 }
 			}
@@ -221,7 +230,7 @@ bool readArguments(int argc, const char * argv[])
 			//try getting next argument as utility file name
 			i++;
 			if (i < argc && argv[i] != nullptr) {
-                if (!makeCanonical(utilitiesFilePath, boost::filesystem::path(argv[i]))) {
+                if (!makeCanonical(utilitiesFilePath, FS_NAMESPACE::path(argv[i]))) {
                     return false;
                 }
 			}
@@ -238,12 +247,12 @@ bool readArguments(int argc, const char * argv[])
 		else if (!pastFiles) {
 			//if no files/directories have been found yet this is probably a file/directory
 			if (inFilePath.empty()) {
-                if (!makeCanonical(inFilePath, boost::filesystem::path(argument))) {
+                if (!makeCanonical(inFilePath, FS_NAMESPACE::path(argument))) {
                     return false;
                 }
 			}
 			else if (outFilePath.empty()) {
-				if (!makeCanonical(outFilePath, boost::filesystem::path(argument))) {
+				if (!makeCanonical(outFilePath, FS_NAMESPACE::path(argument))) {
                     return false;
                 }
 				pastFiles = true;
@@ -259,23 +268,23 @@ bool readArguments(int argc, const char * argv[])
 
 //-----------------------------------------------------------------------------
 
-std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, const boost::filesystem::path & outPath, const boost::filesystem::path & parentDir, const bool recurse)
+std::vector<FileData> getFileDataFrom(const FS_NAMESPACE::path & inPath, const FS_NAMESPACE::path & outPath, const FS_NAMESPACE::path & parentDir, const bool recurse)
 {
 	//get all files from directory
 	std::vector<FileData> files;
 	//check for infinite symlinks
-	if(boost::filesystem::is_symlink(inPath)) {
+	if(FS_NAMESPACE::is_symlink(inPath)) {
 		//check if the symlink points somewhere in the path. this would recurse
-		if(inPath.string().find(boost::filesystem::canonical(inPath).string()) == 0) {
+		if(inPath.string().find(FS_NAMESPACE::canonical(inPath).string()) == 0) {
 			std::cout << "Warning: Path " << inPath << " contains recursive symlink! Skipping." << std::endl;
 			return files;
 		}
 	}
 	//iterate through source directory searching for files
-	const boost::filesystem::directory_iterator dirEnd;
-	for (boost::filesystem::directory_iterator fileIt(inPath); fileIt != dirEnd; ++fileIt) {
-		boost::filesystem::path filePath = (*fileIt).path();
-		if (!boost::filesystem::is_directory(filePath)) {
+	const FS_NAMESPACE::directory_iterator dirEnd;
+	for (FS_NAMESPACE::directory_iterator fileIt(inPath); fileIt != dirEnd; ++fileIt) {
+		FS_NAMESPACE::path filePath = (*fileIt).path();
+		if (!FS_NAMESPACE::is_directory(filePath)) {
 			if (beVerbose) {
 				std::cout << "Found input file " << filePath << std::endl;
 			}
@@ -292,7 +301,7 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 				newFileName.append(".cpp");
 			}
             //remove parent directory of file from path for internal name. This could surely be done in a safer way
-            boost::filesystem::path subPath(filePath.generic_string().substr(parentDir.generic_string().size() + 1));
+            FS_NAMESPACE::path subPath(filePath.generic_string().substr(parentDir.generic_string().size() + 1));
             //add a ":/" before the name to mark internal resources (Yes. Hello Qt!)
             temp.internalName = ":/" + subPath.generic_string();
             //add subdir below parent path to name to enable multiple files with the same name
@@ -311,7 +320,7 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 			}
 			//get file size
 			try {
-				temp.size = (size_t)boost::filesystem::file_size(filePath);
+				temp.size = (size_t)FS_NAMESPACE::file_size(filePath);
 				if (beVerbose) {
 					std::cout << "Size is " << temp.size << " bytes." << std::endl;
 				}
@@ -327,9 +336,9 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 	//does the user want subdirectories?
 	if (recurse) {
 		//iterate through source directory again searching for directories
-		for (boost::filesystem::directory_iterator dirIt(inPath); dirIt != dirEnd; ++dirIt) {
-			boost::filesystem::path dirPath = (*dirIt).path();
-			if (boost::filesystem::is_directory(dirPath)) {
+		for (FS_NAMESPACE::directory_iterator dirIt(inPath); dirIt != dirEnd; ++dirIt) {
+			FS_NAMESPACE::path dirPath = (*dirIt).path();
+			if (FS_NAMESPACE::is_directory(dirPath)) {
 				if (beVerbose) {
 					std::cout << "Found subdirectory " << dirPath << std::endl;
 				}
@@ -344,9 +353,9 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 	return files;
 }
 
-bool convertFile(FileData & fileData, const boost::filesystem::path & commonHeaderPath, std::ofstream & outStream = badOfStream, bool addHeader = true)
+bool convertFile(FileData & fileData, const FS_NAMESPACE::path & commonHeaderPath, std::ofstream & outStream = badOfStream, bool addHeader = true)
 {
-	if (boost::filesystem::exists(fileData.inPath)) {
+	if (FS_NAMESPACE::exists(fileData.inPath)) {
 		//try to open the input file
 		std::ifstream inStream;
 		inStream.open(fileData.inPath.string(), std::ifstream::in | std::ifstream::binary);
@@ -380,7 +389,7 @@ bool convertFile(FileData & fileData, const boost::filesystem::path & commonHead
                     //add header include
                     if (!commonHeaderPath.empty()) {
                         //common header path must be relative to destination directory
-                        boost::filesystem::path relativeHeaderPath = naiveUncomplete(commonHeaderPath, fileData.outPath);
+                        FS_NAMESPACE::path relativeHeaderPath = naiveUncomplete(commonHeaderPath, fileData.outPath);
                         outStream << "#include \"" << relativeHeaderPath.generic_string() << "\"" << std::endl << std::endl;
                     }
                 }
@@ -443,7 +452,7 @@ bool convertFile(FileData & fileData, const boost::filesystem::path & commonHead
 	return false;
 }
 
-bool createCommonHeader(const std::vector<FileData> & fileList, const boost::filesystem::path & commonHeaderPath, bool addUtilityFunctions = false, bool useCConstructs = false)
+bool createCommonHeader(const std::vector<FileData> & fileList, const FS_NAMESPACE::path & commonHeaderPath, bool addUtilityFunctions = false, bool useCConstructs = false)
 {
 	//try opening the output file. truncate it when it exists
 	std::ofstream outStream;
@@ -505,7 +514,7 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const boost::fil
 	return true;
 }
 
-bool createUtilities(std::vector<FileData> & fileList, const boost::filesystem::path & utilitiesPath, const boost::filesystem::path & commonHeaderPath, bool useCConstructs = false, bool addFileData = false)
+bool createUtilities(std::vector<FileData> & fileList, const FS_NAMESPACE::path & utilitiesPath, const FS_NAMESPACE::path & commonHeaderPath, bool useCConstructs = false, bool addFileData = false)
 {
 	//try opening the output file. truncate it when it exists
 	std::ofstream outStream;
@@ -517,7 +526,7 @@ bool createUtilities(std::vector<FileData> & fileList, const boost::filesystem::
 		//add message
 		outStream << "//this file was auto-generated by res2h" << std::endl << std::endl;
 		//create path to include file RELATIVE to this file
-		boost::filesystem::path relativePath = naiveUncomplete(commonHeaderPath, utilitiesPath);
+		FS_NAMESPACE::path relativePath = naiveUncomplete(commonHeaderPath, utilitiesPath);
 		//include header file
 		outStream << "#include \"" << relativePath.string() << "\"" << std::endl << std::endl;
         //if the data should go to this file too, add it
@@ -600,7 +609,7 @@ bool createUtilities(std::vector<FileData> & fileList, const boost::filesystem::
 //Obviously this limits you to ~4GB for the whole binary file and ~4GB per data entry. Go cry about it...
 //There is some redundant information here, but that's for reading stuff faster.
 //Also the version and dummy fields might be needed in later versions...
-bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem::path & filePath)
+bool createBlob(const std::vector<FileData> & fileList, const FS_NAMESPACE::path & filePath)
 {
     //try opening the output file. truncate it when it exists
     std::fstream outStream;
@@ -731,7 +740,7 @@ bool createBlob(const std::vector<FileData> & fileList, const boost::filesystem:
 	return false;
 }
 
-bool appendAtoB(const boost::filesystem::path & destinationPath, const boost::filesystem::path & sourcePath)
+bool appendAtoB(const FS_NAMESPACE::path & destinationPath, const FS_NAMESPACE::path & sourcePath)
 {
 	//try opening the output file.
     std::fstream outStream;
@@ -794,28 +803,28 @@ int main(int argc, const char * argv[])
 	}
 
 	//check if the input path exist
-	if (!boost::filesystem::exists(inFilePath)) {
+	if (!FS_NAMESPACE::exists(inFilePath)) {
 		std::cout << "Error: Invalid input file/directory \"" << inFilePath.string() << "\"!" << std::endl;
 		return -2;
 	}
 
     if (createBinary) {
         //check if argument 2 is a file
-        if (boost::filesystem::is_directory(outFilePath)) {
+        if (FS_NAMESPACE::is_directory(outFilePath)) {
             std::cout << "Error: Output must be a file if -b is used!" << std::endl;
             return -2;
         }
     }
 	else if (appendFile) {
 		//check if argument 2 is a file
-        if (boost::filesystem::is_directory(outFilePath)) {
+        if (FS_NAMESPACE::is_directory(outFilePath)) {
             std::cout << "Error: Output must be a file if -a is used!" << std::endl;
             return -2;
         }
 	}
-    else if (boost::filesystem::is_directory(inFilePath) != boost::filesystem::is_directory(outFilePath)) {
+    else if (FS_NAMESPACE::is_directory(inFilePath) != FS_NAMESPACE::is_directory(outFilePath)) {
         //check if output directory exists
-        if (boost::filesystem::is_directory(outFilePath) && !boost::filesystem::exists(outFilePath)) {
+        if (FS_NAMESPACE::is_directory(outFilePath) && !FS_NAMESPACE::exists(outFilePath)) {
             std::cout << "Error: Invalid output directory \"" << outFilePath.string() << "\"!" << std::endl;
             return -2;
         }
@@ -834,7 +843,7 @@ int main(int argc, const char * argv[])
 	else {
 		//build list of files to process
 		std::vector<FileData> fileList;
-		if (boost::filesystem::is_directory(inFilePath) && boost::filesystem::is_directory(inFilePath)) {
+		if (FS_NAMESPACE::is_directory(inFilePath) && FS_NAMESPACE::is_directory(inFilePath)) {
 			//both files are directories, build file ist
 			fileList = getFileDataFrom(inFilePath, outFilePath, inFilePath, useRecursion);
 			if (fileList.empty()) {
@@ -855,7 +864,7 @@ int main(int argc, const char * argv[])
 			}
 			//get file size
 			try {
-				temp.size = (size_t)boost::filesystem::file_size(inFilePath);
+				temp.size = (size_t)FS_NAMESPACE::file_size(inFilePath);
 				if (beVerbose) {
 					std::cout << "Size is " << temp.size << " bytes." << std::endl;
 				}

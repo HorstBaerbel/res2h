@@ -3,7 +3,15 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
-#include <boost/filesystem.hpp>
+#include <vector>
+
+#if defined(__GNUC__) || defined(__clang__)
+	#include <experimental/filesystem>
+	namespace FS_NAMESPACE = std::experimental::filesystem;
+#elif defined(_MSC_VER)
+	#include <filesystem>
+	namespace FS_NAMESPACE = std::tr2::sys;
+#endif
 
 #include <stdlib.h> //for system()
 
@@ -12,8 +20,8 @@
 
 
 struct FileData {
-	boost::filesystem::path inPath;
-	boost::filesystem::path outPath;
+	FS_NAMESPACE::path inPath;
+	FS_NAMESPACE::path outPath;
 	std::string internalName;
 	std::string dataVariableName;
 	std::string sizeVariableName;
@@ -21,18 +29,18 @@ struct FileData {
 };
 
 #ifdef WIN32
-    boost::filesystem::path inDir = "../test";
-    boost::filesystem::path outDir = "../results";
-    const boost::filesystem::path res2hPath = "..\\Release\\res2h.exe";
-    const boost::filesystem::path res2hdumpPath = "..\\Release\\res2hdump.exe";
+    FS_NAMESPACE::path inDir = "../test";
+    FS_NAMESPACE::path outDir = "../results";
+    const FS_NAMESPACE::path res2hPath = "..\\Release\\res2h.exe";
+    const FS_NAMESPACE::path res2hdumpPath = "..\\Release\\res2hdump.exe";
 #else
-    boost::filesystem::path inDir = "./test";
-    boost::filesystem::path outDir = "./results";
-    const boost::filesystem::path res2hPath = "./res2h";
-    const boost::filesystem::path res2hdumpPath = "./res2hdump";
+    FS_NAMESPACE::path inDir = "./test";
+    FS_NAMESPACE::path outDir = "./results";
+    const FS_NAMESPACE::path res2hPath = "./res2h";
+    const FS_NAMESPACE::path res2hdumpPath = "./res2hdump";
 #endif
 
-const boost::filesystem::path outFile = "test.bin";
+const FS_NAMESPACE::path outFile = "test.bin";
 const std::string res2hdumpOptions = "-f"; //dump using full paths
 const std::string res2hOptions = "-s -b"; //recurse and build binary archive
 
@@ -46,23 +54,23 @@ void printHeader()
     std::cout << "Then unpacking all files again and comparing binary data." << std::endl << std::endl;
 }
 
-std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, const boost::filesystem::path & outPath, const boost::filesystem::path & parentDir, const bool recurse)
+std::vector<FileData> getFileDataFrom(const FS_NAMESPACE::path & inPath, const FS_NAMESPACE::path & outPath, const FS_NAMESPACE::path & parentDir, const bool recurse)
 {
 	//get all files from directory
 	std::vector<FileData> files;
 	//check for infinite symlinks
-	if(boost::filesystem::is_symlink(inPath)) {
+	if(FS_NAMESPACE::is_symlink(inPath)) {
 		//check if the symlink points somewhere in the path. this would recurse
-		if(inPath.string().find(boost::filesystem::canonical(inPath).string()) == 0) {
+		if(inPath.string().find(FS_NAMESPACE::canonical(inPath).string()) == 0) {
 			std::cout << "Warning: Path " << inPath << " contains recursive symlink! Skipping." << std::endl;
 			return files;
 		}
 	}
 	//iterate through source directory searching for files
-	const boost::filesystem::directory_iterator dirEnd;
-	for (boost::filesystem::directory_iterator fileIt(inPath); fileIt != dirEnd; ++fileIt) {
-		boost::filesystem::path filePath = (*fileIt).path();
-		if (!boost::filesystem::is_directory(filePath)) {
+	const FS_NAMESPACE::directory_iterator dirEnd;
+	for (FS_NAMESPACE::directory_iterator fileIt(inPath); fileIt != dirEnd; ++fileIt) {
+		FS_NAMESPACE::path filePath = (*fileIt).path();
+		if (!FS_NAMESPACE::is_directory(filePath)) {
 			//add file to list
 			FileData temp;
 			temp.inPath = filePath;
@@ -76,7 +84,7 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 				newFileName.append(".cpp");
 			}*/
             //remove parent directory of file from path for internal name. This could surely be done in a safer way
-            boost::filesystem::path subPath(filePath.generic_string().substr(parentDir.generic_string().size() + 1));
+            FS_NAMESPACE::path subPath(filePath.generic_string().substr(parentDir.generic_string().size() + 1));
             //add a ":/" before the name to mark internal resources (Yes. Hello Qt!)
             temp.internalName = ":/" + subPath.generic_string();
             //add subdir below parent path to name to enable multiple files with the same name
@@ -91,7 +99,7 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
             temp.outPath = outPath / subDirString / newFileName;
 			//get file size
 			try {
-				temp.size = (size_t)boost::filesystem::file_size(filePath);
+				temp.size = (size_t)FS_NAMESPACE::file_size(filePath);
 			}
 			catch(...) {
 				std::cout << "Error: Failed to get size of " << filePath << "!" << std::endl;
@@ -104,9 +112,9 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 	//does the user want subdirectories?
 	if (recurse) {
 		//iterate through source directory again searching for directories
-		for (boost::filesystem::directory_iterator dirIt(inPath); dirIt != dirEnd; ++dirIt) {
-			boost::filesystem::path dirPath = (*dirIt).path();
-			if (boost::filesystem::is_directory(dirPath)) {
+		for (FS_NAMESPACE::directory_iterator dirIt(inPath); dirIt != dirEnd; ++dirIt) {
+			FS_NAMESPACE::path dirPath = (*dirIt).path();
+			if (FS_NAMESPACE::is_directory(dirPath)) {
 				//subdirectory found. recurse.
 				std::vector<FileData> subFiles = getFileDataFrom(dirPath, outPath, parentDir, recurse);
 				//add returned result to file list
@@ -118,7 +126,7 @@ std::vector<FileData> getFileDataFrom(const boost::filesystem::path & inPath, co
 	return files;
 }
 
-bool compareAtoB(const boost::filesystem::path & a, const boost::filesystem::path & b)
+bool compareAtoB(const FS_NAMESPACE::path & a, const FS_NAMESPACE::path & b)
 {
 	//try opening the first file.
     std::ifstream aStream;
@@ -190,26 +198,26 @@ int main(int argc, const char * argv[])
 {
 	printHeader();
 
-    std::cout << "TEST: Running in " << boost::filesystem::current_path() << std::endl;
+    std::cout << "TEST: Running in " << FS_NAMESPACE::current_path() << std::endl;
 
     //remove all files in results directory
     std::cout << "TEST: Deleting and re-creating " << outDir << "." << std::endl;
     try {
-        boost::filesystem::remove_all(outDir);
+        FS_NAMESPACE::remove_all(outDir);
     }
-    catch (boost::filesystem::filesystem_error e) {
+    catch (FS_NAMESPACE::filesystem_error e) {
         //directory was probably not there...
         std::cout << "Warning: " << e.what() << std::endl;
     }
     //and re-create the directory
-    boost::filesystem::create_directory(outDir);
+    FS_NAMESPACE::create_directory(outDir);
 
     //check if the input/output directories exist now
     try {
-        inDir = boost::filesystem::canonical(inDir);
-        outDir = boost::filesystem::canonical(outDir);
+        inDir = FS_NAMESPACE::canonical(inDir);
+        outDir = FS_NAMESPACE::canonical(outDir);
     }
-    catch (boost::filesystem::filesystem_error e) {
+    catch (FS_NAMESPACE::filesystem_error e) {
         //directory was probably not there...
         std::cout << "Error: " << e.what() << std::endl;
         return -1;

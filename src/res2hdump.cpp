@@ -1,7 +1,13 @@
 #include <iostream>
-
 #include <fstream>
-#include <boost/filesystem.hpp>
+
+#if defined(__GNUC__) || defined(__clang__)
+	#include <experimental/filesystem>
+	namespace FS_NAMESPACE = std::experimental::filesystem;
+#elif defined(_MSC_VER)
+#include <filesystem>
+namespace FS_NAMESPACE = std::tr2::sys;
+#endif
 
 #include "res2hinterface.hpp"
 
@@ -9,28 +15,28 @@
 bool beVerbose = false;
 bool useFullPaths = false;
 bool informationOnly = false;
-boost::filesystem::path inFilePath;
-boost::filesystem::path outFilePath;
+FS_NAMESPACE::path inFilePath;
+FS_NAMESPACE::path outFilePath;
 
 
 //-----------------------------------------------------------------------------
 
-bool makeCanonical(boost::filesystem::path & result, const boost::filesystem::path & path)
+bool makeCanonical(FS_NAMESPACE::path & result, const FS_NAMESPACE::path & path)
 {
     //if we use canonical the file must exits, else we get an exception.
     try {
-        result = boost::filesystem::canonical(path);
+        result = FS_NAMESPACE::canonical(path);
     }
     catch(...) {
         //an error occurred. this maybe because the file is not there yet. try without the file name
         try {
-            result = boost::filesystem::canonical(boost::filesystem::path(path).remove_filename());
+            result = FS_NAMESPACE::canonical(FS_NAMESPACE::path(path).remove_filename());
             //ok. this worked. add file name again
             result /= path.filename();
         }
         catch (...) {
             //hmm. didn't work. tell the user. at least the path should be there...
-            std::cout << "The path \"" << boost::filesystem::path(path).remove_filename().string() << "\" couldn't be found. Please create it." << std::endl;
+            std::cout << "The path \"" << FS_NAMESPACE::path(path).remove_filename().string() << "\" couldn't be found. Please create it." << std::endl;
             return false;
         }
     }
@@ -81,12 +87,12 @@ bool readArguments(int argc, const char * argv[])
 		else if (!pastFiles) {
 			//if no files/directories have been found yet this is probably a file/directory
 			if (inFilePath.empty()) {
-                if (!makeCanonical(inFilePath, boost::filesystem::path(argument))) {
+                if (!makeCanonical(inFilePath, FS_NAMESPACE::path(argument))) {
                     return false;
                 }
 			}
 			else if (outFilePath.empty()) {
-				if (!makeCanonical(outFilePath, boost::filesystem::path(argument))) {
+				if (!makeCanonical(outFilePath, FS_NAMESPACE::path(argument))) {
                     return false;
                 }
 				pastFiles = true;
@@ -102,7 +108,7 @@ bool readArguments(int argc, const char * argv[])
 
 //-----------------------------------------------------------------------------
 
-bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path & archive, bool createPaths = true, bool dontExtract = false)
+bool dumpArchive(FS_NAMESPACE::path & destination, FS_NAMESPACE::path & archive, bool createPaths = true, bool dontExtract = false)
 {
     try {
         if (Res2h::loadArchive(archive.string())) {
@@ -123,16 +129,16 @@ bool dumpArchive(boost::filesystem::path & destination, boost::filesystem::path 
                             Res2h::ResourceEntry file = Res2h::loadFile(entry.filePath);
                             if (file.data && file.dataSize > 0) {
                                 //worked. now dump file data to disk. construct output path
-                                boost::filesystem::path subPath = entry.filePath.erase(0, 2);
-                                boost::filesystem::path outPath = destination / subPath;
+                                FS_NAMESPACE::path subPath = entry.filePath.erase(0, 2);
+                                FS_NAMESPACE::path outPath = destination / subPath;
                                 if (createPaths) {
-                                    boost::filesystem::path dirPath = destination;
+                                    FS_NAMESPACE::path dirPath = destination;
                                     for (auto sdIt = subPath.begin(); sdIt->filename() != subPath.filename(); ++sdIt) {
                                         //build output path with subdirectory
                                         dirPath /= *sdIt;
                                         //check if if exists
-                                        if (!boost::filesystem::exists(dirPath)) {
-                                            boost::filesystem::create_directory(dirPath);
+                                        if (!FS_NAMESPACE::exists(dirPath)) {
+                                            FS_NAMESPACE::create_directory(dirPath);
                                         }
                                     }
                                 }
@@ -191,19 +197,19 @@ int main(int argc, const char * argv[])
 	}
 
 	//check if the input path exist
-	if (!boost::filesystem::exists(inFilePath)) {
+	if (!FS_NAMESPACE::exists(inFilePath)) {
 		std::cout << "Error: Invalid input file \"" << inFilePath.string() << "\"!" << std::endl;
 		return -2;
 	}
 	//check if argument 1 is a file
-	if (boost::filesystem::is_directory(inFilePath)) {
+	if (FS_NAMESPACE::is_directory(inFilePath)) {
 		std::cout << "Error: Input must be a file!" << std::endl;
 		return -2;
 	}
 	
 	if (!informationOnly) {
 		//check if argument 2 is a directory
-		if (!boost::filesystem::is_directory(outFilePath)) {
+		if (!FS_NAMESPACE::is_directory(outFilePath)) {
 			std::cout << "Error: Output must be a directory!" << std::endl;
 			return -2;
 		}
