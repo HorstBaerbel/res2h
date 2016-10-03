@@ -6,48 +6,48 @@ project(res2h)
 #set up compiler flags and excutable names
 
 if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-    #set up compiler flags for Clang
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2") #support C++11 for std::, optimize
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2 -s") #optimize, strip binary
+	#set up compiler flags for Clang
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2") #support C++11 for std::, optimize
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2 -s") #optimize, strip binary
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
-    #check for G++ 4.7+
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE G++_VERSION)
-    if (G++_VERSION VERSION_LESS 4.7)
-            message(SEND_ERROR "You need at least G++ 4.7 to compile cmp5!")
-    endif()
-    #set up compiler flags for GCC
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2") #support C++11 for std::, optimize
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2 -s") #optimize, strip binary
+	#check for G++ 5.4+
+	execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE G++_VERSION)
+	if (G++_VERSION VERSION_LESS 5.4)
+			message(SEND_ERROR "You need at least G++ 5.4 to compile cmp5!")
+	endif()
+	#set up compiler flags for GCC
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2") #support C++11 for std::, optimize
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2 -s") #optimize, strip binary
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
-    set(CMAKE_DEBUG_POSTFIX "d")
-    add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
-    add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP") #multi-processor compilation
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP") #multi-processor compilation
+	set(CMAKE_DEBUG_POSTFIX "d")
+	add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+	add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP") #multi-processor compilation
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP") #multi-processor compilation
 endif()
 
 #-------------------------------------------------------------------------------
 #define basic sources and headers
 
 set(R2H_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.hpp
 )
 
 set(R2H_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.cpp
 )
 
 #define headers and sources for dump executable
 set(R2H_DUMP_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.hpp
 )
 
 set(R2H_DUMP_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/res2hdump.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hdump.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.cpp
 )
 
@@ -64,9 +64,9 @@ set(R2H_UNITTEST_SOURCES
 #define OS specific sources and headers
 
 if(MSVC)
-    LIST(APPEND R2H_SOURCES
+	LIST(APPEND R2H_SOURCES
 		${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.rc
-    )
+	)
 endif()
 
 #-------------------------------------------------------------------------------
@@ -103,12 +103,12 @@ target_link_libraries(unittest ${R2H_LIBRARIES})
 #-------------------------------------------------------------------------------
 #special properties for windows builds
 if(MSVC)
-    #create console application
-    #Note that up to CMake 2.8.11.2 this feature is broken: http://public.kitware.com/Bug/view.php?id=12566
-    set_target_properties(res2h PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
-    set_target_properties(res2h PROPERTIES COMPILE_DEFINITIONS_DEBUG "_CONSOLE")
-    set_target_properties(res2h PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
-    set_target_properties(res2h PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "_CONSOLE")
-    set_target_properties(res2h PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
-    set_target_properties(res2h PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
+	#create console application
+	#Note that up to CMake 2.8.11.2 this feature is broken: http://public.kitware.com/Bug/view.php?id=12566
+	set_target_properties(res2h PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
+	set_target_properties(res2h PROPERTIES COMPILE_DEFINITIONS_DEBUG "_CONSOLE")
+	set_target_properties(res2h PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
+	set_target_properties(res2h PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "_CONSOLE")
+	set_target_properties(res2h PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
+	set_target_properties(res2h PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
 endif()
