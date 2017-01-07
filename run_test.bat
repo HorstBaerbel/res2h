@@ -1,6 +1,6 @@
 @echo off
 echo ---------------------------------------------------------------------
-mkdir results
+mkdir results /S /Q
 echo ---------------------------------------------------------------------
 .\Release\res2h.exe .\test .\results -s -v -h .\results\resources.h -u .\results\resources.cpp
 echo ---------------------------------------------------------------------

@@ -10,6 +10,8 @@ It should compile and work at least in Windows, Ubuntu and Raspbian.
 
 **run_test** is a script that lets you test res2h and res2hdump after compiling. It uses res2h with some options to create C++ files and a binary archive from example files in /test. It then unpacks this archive to /results again.
 
+**unittest** does the same thing in an executable. It is a good example on how to use the re2h functions.
+
 License
 ========
 
@@ -25,17 +27,7 @@ cmake .
 make
 </pre>
 
-Visual Studio 2013, G++ 4.7 or Clang 3.3 (for C++11), boost-filesystem and boost-system (> v1.49) are needed to compile "res2h" and "res2hdump" (but not the "res2hinterface"). For installing G++ 4.7 see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
-Install the boost packages with:
-```
-sudo apt-get install libboost-filesystem-dev
-sudo apt-get install libboost-system-dev
-```
-or
-```
-sudo apt-get install libboost-all-dev
-```
-to get all of boost.
+Visual Studio 2015, G++ 5.4 or Clang 3.9 (C++11 support) are needed. "res2h" and "res2hdump" use std::filesystem, but not the "res2hinterface" you use in your application. For installing a new G++ version see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
 
 Usage - res2h
 ========
@@ -173,37 +165,37 @@ Binary archive format
         <td>Start</td><td>char[8]</td><td>magic number string "res2hbin"</td>
     </tr>
     <tr>
-        <td>08</td><td>uint32_t</td><td>file format version number (currently 1)</td>
+        <td>08</td><td>uint32_t</td><td>file format version number (currently 2)</td>
     </tr>
     <tr>
-        <td>12</td><td>uint32_t</td><td>format flags or other crap for file (currently 0)</td>
+        <td>12</td><td>uint32_t</td><td>format flags(32/64 bit depth of archive)</td>
     </tr>
     <tr>
-        <td>16</td><td>uint32_t</td><td>size of whole archive in bytes</td>
+        <td>16</td><td>uint32_t/uint64_t</td><td>size of whole archive in bytes</td>
     </tr>
     <tr>
-        <td>20</td><td>uint32_t</td><td>number of directory and file entries following</td>
+        <td>20/24</td><td>uint32_t</td><td>number of directory and file entries following</td>
     </tr>
     <tr>
         <td colspan="3">Then follows the directory:</td>
     </tr>
     <tr>
-        <td>24 + 00</td><td>uint32_t</td><td>file entry #0, size of internal name INCLUDING null-terminating character</td>
+        <td>24/28 + 00</td><td>uint32_t</td><td>file entry #0, size of internal name INCLUDING null-terminating character</td>
     </tr>
     <tr>
-        <td>24 + 04</td><td>char[]</td><td>file entry #0, internal name (null-terminated)</td>
+        <td>24/28 + 04</td><td>char[]</td><td>file entry #0, internal name (null-terminated)</td>
     </tr>
     <tr>
-        <td>24 + 04 + name</td><td>uint32_t</td><td>file entry #0, format flags for entry (currently 0)</td>
+        <td>24/28 + 04 + name</td><td>uint32_t</td><td>file entry #0, format flags for entry (currently 0)</td>
     </tr>
     <tr>
-        <td>24 + 08 + name</td><td>uint32_t</td><td>file entry #0, size of data</td>
+        <td>24/28 + 08 + name</td><td>uint32_t/uint64_t</td><td>file entry #0, size of data</td>
     </tr>
     <tr>
-        <td>24 + 12 + name</td><td>uint32_t</td><td>file entry #0, absolute offset of data in file</td>
+        <td>24/28 + 12/16 + name</td><td>uint32_t/uint64_t</td><td>file entry #0, absolute offset of data in file</td>
     </tr>
     <tr>
-        <td>24 + 16 + name</td><td>uint32_t</td><td>file entry #0, Adler-32 (RFC1950) checksum of data</td>
+        <td>24/28 + 16/24 + name</td><td>uint32_t/uint64_t</td><td>file entry #0, Fletcher32/64 checksum of data</td>
     </tr>
     <tr>
         <td colspan="3">Then follow the other directory entries</td>
@@ -212,7 +204,7 @@ Binary archive format
         <td colspan="3">Directly after the directory the data blocks begin</td>
     </tr>
     <tr>
-        <td>End - 04</td><td>uint32_t</td><td>Adler-32 (RFC1950) checksum of whole file up to this point</td>
+        <td>End - 04/08</td><td>uint32_t/uint64_t</td><td>Fletcher32/64 checksum of whole file up to this point</td>
     </tr>
 </table>
 
