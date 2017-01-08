@@ -5,11 +5,12 @@
 	#include <experimental/filesystem>
 	namespace FS_NAMESPACE = std::experimental::filesystem;
 #elif defined(_MSC_VER)
-#include <filesystem>
-namespace FS_NAMESPACE = std::tr2::sys;
+	#include <filesystem>
+	namespace FS_NAMESPACE = std::tr2::sys;
 #endif
 
 #include "res2hinterface.hpp"
+#include "checksum.hpp"
 
 
 bool beVerbose = false;
@@ -27,7 +28,7 @@ bool makeCanonical(FS_NAMESPACE::path & result, const FS_NAMESPACE::path & path)
 	try {
 		result = FS_NAMESPACE::canonical(path);
 	}
-	catch(...) {
+	catch (...) {
 		//an error occurred. this maybe because the file is not there yet. try without the file name
 		try {
 			result = FS_NAMESPACE::canonical(FS_NAMESPACE::path(path).remove_filename());
@@ -110,78 +111,78 @@ bool readArguments(int argc, const char * argv[])
 
 bool dumpArchive(FS_NAMESPACE::path & destination, FS_NAMESPACE::path & archive, bool createPaths = true, bool dontExtract = false)
 {
-	try {
-		if (Res2h::loadArchive(archive.string())) {
-			//dump archive
-			for (size_t i = 0; i < Res2h::getNrOfResources(); ++i) {
-				try {
-					//read resource entry
-					Res2h::ResourceEntry entry = Res2h::getResource(i);
-					//dump to console
-					std::cout << "File #" << std::dec << i << " \"" << entry.filePath << "\"" << std::endl;
-					std::cout << "Archive file: \"" << entry.archivePath << "\", archive offset: " << std::dec << entry.archiveStart << " bytes" << std::endl;
-					std::cout << "Data offset: " << std::dec << entry.dataOffset << " bytes" << std::endl;
-					std::cout << "Data size: " << std::dec << entry.dataSize << " bytes" << std::endl;
-					std::cout << "Checksum: " << std::hex << std::showbase << entry.checksum << std::endl;					
-					if (!dontExtract) {
-						//if the caller wants to dump data, do it
-						try {
-							Res2h::ResourceEntry file = Res2h::loadFile(entry.filePath);
-							if (file.data && file.dataSize > 0) {
-								//worked. now dump file data to disk. construct output path
-								FS_NAMESPACE::path subPath = entry.filePath.erase(0, 2);
-								FS_NAMESPACE::path outPath = destination / subPath;
-								if (createPaths) {
-									FS_NAMESPACE::path dirPath = destination;
-									for (auto sdIt = subPath.begin(); sdIt->filename() != subPath.filename(); ++sdIt) {
-										//build output path with subdirectory
-										dirPath /= *sdIt;
-										//check if if exists
-										if (!FS_NAMESPACE::exists(dirPath)) {
-											FS_NAMESPACE::create_directory(dirPath);
-										}
-									}
+	 try {
+		  if (Res2h<uint64_t>::getInstance().loadArchive(archive.string())) {
+				//dump archive
+				for (uint32_t i = 0; i < Res2h<uint64_t>::getInstance().getNrOfResources(); ++i) {
+					 try {
+						  //read resource entry
+						  auto entry = Res2h<uint64_t>::getInstance().getResource(i);
+						  //dump to console
+						  std::cout << "File #" << std::dec << i << " \"" << entry.filePath << "\"" << std::endl;
+						  std::cout << "Archive file: \"" << entry.archivePath << "\", archive offset: " << std::dec << entry.offsetInFile << " bytes" << std::endl;
+						  std::cout << "Data offset: " << std::dec << entry.dataOffset << " bytes" << std::endl;
+						  std::cout << "Data size: " << std::dec << entry.dataSize << " bytes" << std::endl;
+						  std::cout << "Checksum: " << std::hex << std::showbase << entry.checksum << std::endl;					
+						  if (!dontExtract) {
+								//if the caller wants to dump data, do it
+								try {
+									 auto file = Res2h<uint64_t>::getInstance().loadFile(entry.filePath);
+									 if (file.data && file.dataSize > 0) {
+										  //worked. now dump file data to disk. construct output path
+										  FS_NAMESPACE::path subPath = entry.filePath.erase(0, 2);
+										  FS_NAMESPACE::path outPath = destination / subPath;
+										  if (createPaths) {
+												FS_NAMESPACE::path dirPath = destination;
+												for (auto sdIt = subPath.begin(); sdIt->filename() != subPath.filename(); ++sdIt) {
+													 //build output path with subdirectory
+													 dirPath /= *sdIt;
+													 //check if if exists
+													 if (!FS_NAMESPACE::exists(dirPath)) {
+														  FS_NAMESPACE::create_directory(dirPath);
+													 }
+												}
+										  }
+										  //try to open output file
+										  std::ofstream outStream;
+										  outStream.open(outPath.string(), std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+										  if (outStream.is_open() && outStream.good()) {
+												//write data to disk
+												outStream.write(reinterpret_cast<const char *>(file.data.get()), file.dataSize);
+												//check if data has been written
+												if (static_cast<uint64_t>(outStream.tellp()) != file.dataSize) {
+													 std::cout << "Failed to read all data for resource #" << std::dec << i << std::endl;
+												}
+												//close file
+												outStream.close();
+										  }
+										  else {
+												std::cout << "Failed to open file \"" << outPath.string() << "\" for writing!" << std::endl;
+										  }
+									 }
+									 else {
+										  std::cout << "Failed to get data for resource #" << i << " from archive!" << std::endl;
+									 }
 								}
-								//try to open output file
-								std::ofstream outStream;
-								outStream.open(outPath.string(), std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
-								if (outStream.is_open() && outStream.good()) {
-									//write data to disk
-									outStream.write(reinterpret_cast<const char *>(file.data.get()), file.dataSize);
-									//check if data has been written
-									if ((size_t)outStream.tellp() != file.dataSize) {
-										std::cout << "Failed to read all data for resource #" << std::dec << i << std::endl;
-									}
-									//close file
-									outStream.close();
+								catch (Res2hException e) {
+									 std::cout << "Error loading resource " << std::dec << i << " from archive - " << e.whatString() << std::endl;
 								}
-								else {
-									std::cout << "Failed to open file \"" << outPath.string() << "\" for writing!" << std::endl;
-								}
-							}
-							else {
-								std::cout << "Failed to get data for resource #" << i << " from archive!" << std::endl;
-							}
-						}
-						catch (Res2hException e) {
-							std::cout << "Error loading resource " << std::dec << i << " from archive - " << e.whatString() << std::endl;
-						}
-					} //if(!dontExtract)
+						  } //if(!dontExtract)
+					 }
+					 catch (Res2hException e) {
+						  std::cout << "Error reading resource #" << std::dec << i << " - " << e.whatString() << std::endl;
+					 }
 				}
-				catch (Res2hException e) {
-					std::cout << "Error reading resource #" << std::dec << i << " - " << e.whatString() << std::endl;
-				}
-			}
-			return true;
-		}
-		else {
-			std::cout << "Failed to open archive " << archive << std::endl;
-		}
-	}
-	catch (Res2hException e) {
-		std::cout << "Error: " << e.whatString() << std::endl;
-	}
-	return false;
+				return true;
+		  }
+		  else {
+				std::cout << "Failed to open archive " << archive << std::endl;
+		  }
+	 }
+	 catch (Res2hException e) {
+		  std::cout << "Error: " << e.whatString() << std::endl;
+	 }
+	 return false;
 }
 
 //-----------------------------------------------------------------------------

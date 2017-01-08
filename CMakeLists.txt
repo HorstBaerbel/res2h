@@ -13,7 +13,7 @@ elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
 	#check for G++ 5.4+
 	execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE G++_VERSION)
 	if (G++_VERSION VERSION_LESS 5.4)
-			message(SEND_ERROR "You need at least G++ 5.4 to compile cmp5!")
+			message(SEND_ERROR "You need at least G++ 5.4 to compile res2h!")
 	endif()
 	#set up compiler flags for GCC
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2") #support C++11 for std::, optimize
@@ -31,24 +31,29 @@ endif()
 
 set(R2H_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.hpp
 )
 
 set(R2H_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.cpp
 )
 
 #define headers and sources for dump executable
 set(R2H_DUMP_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.hpp
 )
 
 set(R2H_DUMP_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hdump.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hutils.cpp
+)
+
+set(R2H_DUMP_SOURCES
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hdump.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.cpp
 )
 
 #define headers and sources for unit test executable

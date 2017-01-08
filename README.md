@@ -165,37 +165,37 @@ Binary archive format
         <td>Start</td><td>char[8]</td><td>magic number string "res2hbin"</td>
     </tr>
     <tr>
-        <td>08</td><td>uint32_t</td><td>file format version number (currently 1)</td>
+        <td>08</td><td>uint32_t</td><td>file format version number (currently 2)</td>
     </tr>
     <tr>
-        <td>12</td><td>uint32_t</td><td>format flags or other crap for file (currently 0)</td>
+        <td>12</td><td>uint32_t</td><td>format flags(32/64 bit depth of archive)</td>
     </tr>
     <tr>
-        <td>16</td><td>uint32_t</td><td>size of whole archive in bytes</td>
+        <td>16</td><td>uint32_t/uint64_t</td><td>size of whole archive in bytes</td>
     </tr>
     <tr>
-        <td>20</td><td>uint32_t</td><td>number of directory and file entries following</td>
+        <td>20/24</td><td>uint32_t</td><td>number of directory and file entries following</td>
     </tr>
     <tr>
         <td colspan="3">Then follows the directory:</td>
     </tr>
     <tr>
-        <td>24 + 00</td><td>uint32_t</td><td>file entry #0, size of internal name INCLUDING null-terminating character</td>
+        <td>24/28 + 00</td><td>uint32_t</td><td>file entry #0, size of internal name INCLUDING null-terminating character</td>
     </tr>
     <tr>
-        <td>24 + 04</td><td>char[]</td><td>file entry #0, internal name (null-terminated)</td>
+        <td>24/28 + 04</td><td>char[]</td><td>file entry #0, internal name (null-terminated)</td>
     </tr>
     <tr>
-        <td>24 + 04 + name</td><td>uint32_t</td><td>file entry #0, format flags for entry (currently 0)</td>
+        <td>24/28 + 04 + name</td><td>uint32_t</td><td>file entry #0, format flags for entry (currently 0)</td>
     </tr>
     <tr>
-        <td>24 + 08 + name</td><td>uint32_t</td><td>file entry #0, size of data</td>
+        <td>24/28 + 08 + name</td><td>uint32_t/uint64_t</td><td>file entry #0, size of data</td>
     </tr>
     <tr>
-        <td>24 + 12 + name</td><td>uint32_t</td><td>file entry #0, absolute offset of data in file</td>
+        <td>24/28 + 12/16 + name</td><td>uint32_t/uint64_t</td><td>file entry #0, absolute offset of data in file</td>
     </tr>
     <tr>
-        <td>24 + 16 + name</td><td>uint32_t</td><td>file entry #0, Adler-32 (RFC1950) checksum of data</td>
+        <td>24/28 + 16/24 + name</td><td>uint32_t/uint64_t</td><td>file entry #0, Fletcher32/64 checksum of data</td>
     </tr>
     <tr>
         <td colspan="3">Then follow the other directory entries</td>
@@ -204,7 +204,7 @@ Binary archive format
         <td colspan="3">Directly after the directory the data blocks begin</td>
     </tr>
     <tr>
-        <td>End - 04</td><td>uint32_t</td><td>Adler-32 (RFC1950) checksum of whole file up to this point</td>
+        <td>End - 04/08</td><td>uint32_t/uint64_t</td><td>Fletcher32/64 checksum of whole file up to this point</td>
     </tr>
 </table>
 
