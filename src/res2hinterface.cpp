@@ -51,28 +51,28 @@ bool Res2h::isArchive(const std::string & archivePath)
 		inStream.close();
 	}
 	else {
-        throw Res2hException(std::string("isArchive() - Failed to open archive \"") + archivePath + "\" for reading.");
-    }
+		throw Res2hException(std::string("isArchive() - Failed to open archive \"") + archivePath + "\" for reading.");
+	}
 	return false;
 }
 
 bool Res2h::loadArchive(const std::string & archivePath)
 {
-    //check if there are entries for this archive already in the map and delete them
-    auto rmIt = resourceMap.begin();
-    while (rmIt != resourceMap.end()) {
-        if (rmIt->second.archivePath == archivePath) {
-            //'tis from this archive. erase.
-            rmIt = resourceMap.erase(rmIt);
-        }
-        else {
-            ++rmIt;
-        }
-    }
-    //open archive
-    std::ifstream inStream;
-    inStream.open(archivePath, std::ifstream::in | std::ifstream::binary);
-    if (inStream.is_open() && inStream.good()) {
+	//check if there are entries for this archive already in the map and delete them
+	auto rmIt = resourceMap.begin();
+	while (rmIt != resourceMap.end()) {
+		if (rmIt->second.archivePath == archivePath) {
+			//'tis from this archive. erase.
+			rmIt = resourceMap.erase(rmIt);
+		}
+		else {
+			++rmIt;
+		}
+	}
+	//open archive
+	std::ifstream inStream;
+	inStream.open(archivePath, std::ifstream::in | std::ifstream::binary);
+	if (inStream.is_open() && inStream.good()) {
 		size_t archiveOffset = 0;
 		//try to read magic bytes
 		unsigned char magicBytes[sizeof(RES2H_MAGIC_BYTES) - 1] = {0};
@@ -153,7 +153,7 @@ bool Res2h::loadArchive(const std::string & archivePath)
 						inStream.read(reinterpret_cast<char *>(&temp.checksum), sizeof(uint32_t));
 						//add archive path and offset
 						temp.archivePath = archivePath;
-						temp.archiveStart = archiveOffset;
+						temp.archiveStart = static_cast<uint32_t>(archiveOffset);
 						//add to map
 						resourceMap[temp.filePath] = temp;
 					}
@@ -177,107 +177,107 @@ bool Res2h::loadArchive(const std::string & archivePath)
 		}
 	}
 	else {
-        throw Res2hException(std::string("loadArchive() - Failed to open archive \"") + archivePath + "\" for reading.");
-    }
+		throw Res2hException(std::string("loadArchive() - Failed to open archive \"") + archivePath + "\" for reading.");
+	}
 	return false;
 }
 
 Res2h::ResourceEntry Res2h::loadFileFromDisk(const std::string & filePath)
 {
-    ResourceEntry temp;
-    //try to open file
-    std::ifstream inStream;
-    inStream.open(filePath, std::ifstream::in | std::ifstream::binary);
-    if (inStream.is_open() && inStream.good()) {
-        //opened ok. check file size
-        inStream.seekg(0, std::ios::end);
-        size_t fileSize = (size_t)inStream.tellg();
-        inStream.seekg(0);
-        if (fileSize > 0) {
-            //allocate data
-            std::shared_ptr<unsigned char> fileData = std::shared_ptr<unsigned char>(new unsigned char[fileSize], [](unsigned char *p) { delete[] p; });
-            //try reading data
-            try {
-                inStream.read(reinterpret_cast<char *>(fileData.get()), fileSize);
-            }
-            catch (std::ios_base::failure) { /*reading didn't work properly. salvage what we can.*/ }
-            //check how many bytes were actually read
-            if (inStream.gcount() != fileSize) {
-                throw Res2hException(std::string("loadFileFromDisk() - Failed to read file \"") + filePath + "\".");
-            }
-            //seems to have worked. store data.
-            temp.filePath = filePath;
-            temp.data = fileData;
-            temp.dataSize = fileSize;
-        }
-    }
-    else {
-        throw Res2hException(std::string("loadFileFromDisk() - Failed to open file \"") + filePath + "\" for reading.");
-    }
-    return temp;
+	ResourceEntry temp;
+	//try to open file
+	std::ifstream inStream;
+	inStream.open(filePath, std::ifstream::in | std::ifstream::binary);
+	if (inStream.is_open() && inStream.good()) {
+		//opened ok. check file size
+		inStream.seekg(0, std::ios::end);
+		size_t fileSize = (size_t)inStream.tellg();
+		inStream.seekg(0);
+		if (fileSize > 0) {
+			//allocate data
+			std::shared_ptr<unsigned char> fileData = std::shared_ptr<unsigned char>(new unsigned char[fileSize], [](unsigned char *p) { delete[] p; });
+			//try reading data
+			try {
+				inStream.read(reinterpret_cast<char *>(fileData.get()), fileSize);
+			}
+			catch (std::ios_base::failure) { /*reading didn't work properly. salvage what we can.*/ }
+			//check how many bytes were actually read
+			if (inStream.gcount() != fileSize) {
+				throw Res2hException(std::string("loadFileFromDisk() - Failed to read file \"") + filePath + "\".");
+			}
+			//seems to have worked. store data.
+			temp.filePath = filePath;
+			temp.data = fileData;
+			temp.dataSize = static_cast<uint32_t>(fileSize);
+		}
+	}
+	else {
+		throw Res2hException(std::string("loadFileFromDisk() - Failed to open file \"") + filePath + "\" for reading.");
+	}
+	return temp;
 }
 
 Res2h::ResourceEntry Res2h::loadFileFromArchive(const Res2h::ResourceEntry & entry)
 {
-    ResourceEntry temp = entry;
-    //try to open archive file
-    std::ifstream inStream;
-    inStream.open(temp.archivePath, std::ifstream::in | std::ifstream::binary);
-    if (inStream.is_open() && inStream.good()) {
-        //opened ok. move to data offset
-        inStream.seekg(temp.archiveStart + temp.dataOffset);
-        //allocate data
-        temp.data = std::shared_ptr<unsigned char>(new unsigned char[temp.dataSize], [](unsigned char *p) { delete[] p; });
-        //try reading data
-        try {
-            inStream.read(reinterpret_cast<char *>(temp.data.get()), temp.dataSize);
-        }
-        catch (std::ios_base::failure) { /*reading didn't work properly. salvage what we can.*/ }
-        //check how many bytes were actually read
-        if (inStream.gcount() != temp.dataSize) {
-            throw Res2hException(std::string("loadFileFromArchive() - Failed to read \"") + temp.filePath + "\" from archive.");
-        }
-    }
-    else {
-        throw Res2hException(std::string("loadFileFromArchive() - Failed to open archive \"") + temp.archivePath + "\" for reading.");
-    }
-    return temp;
+	ResourceEntry temp = entry;
+	//try to open archive file
+	std::ifstream inStream;
+	inStream.open(temp.archivePath, std::ifstream::in | std::ifstream::binary);
+	if (inStream.is_open() && inStream.good()) {
+		//opened ok. move to data offset
+		inStream.seekg(temp.archiveStart + temp.dataOffset);
+		//allocate data
+		temp.data = std::shared_ptr<unsigned char>(new unsigned char[temp.dataSize], [](unsigned char *p) { delete[] p; });
+		//try reading data
+		try {
+			inStream.read(reinterpret_cast<char *>(temp.data.get()), temp.dataSize);
+		}
+		catch (std::ios_base::failure) { /*reading didn't work properly. salvage what we can.*/ }
+		//check how many bytes were actually read
+		if (inStream.gcount() != temp.dataSize) {
+			throw Res2hException(std::string("loadFileFromArchive() - Failed to read \"") + temp.filePath + "\" from archive.");
+		}
+	}
+	else {
+		throw Res2hException(std::string("loadFileFromArchive() - Failed to open archive \"") + temp.archivePath + "\" for reading.");
+	}
+	return temp;
 }
 
 Res2h::ResourceEntry Res2h::loadFile(const std::string & filePath, bool keepInCache, bool checkChecksum)
 {
 	ResourceEntry temp;
-    //find file in the map
-    for (auto rmIt = resourceMap.begin(); rmIt != resourceMap.end(); ++rmIt) {
-        if (rmIt->second.filePath == filePath) {
+	//find file in the map
+	for (auto rmIt = resourceMap.begin(); rmIt != resourceMap.end(); ++rmIt) {
+		if (rmIt->second.filePath == filePath) {
 			//found. check if still in memory.
 			temp = rmIt->second;
 			if (temp.data) {
 				//data is still valid. return it.
 				return temp;
 			}
-            //data needs to be loaded. check if archive file
-            if (filePath.find_first_of(":/") == 0) {
-                //yes. try to load archive
-                temp = loadFileFromArchive(temp);
-                //calculate checksum if user wants to
-                if (checkChecksum) {
-                    if (temp.checksum != calculateAdler32(temp.data.get(), temp.dataSize)) {
-                        throw Res2hException(std::string("loadFile() - Bad checksum for \"") + filePath + "\".");
-                    }
-                }
-            }
-            else {
+			//data needs to be loaded. check if archive file
+			if (filePath.find_first_of(":/") == 0) {
+				//yes. try to load archive
+				temp = loadFileFromArchive(temp);
+				//calculate checksum if user wants to
+				if (checkChecksum) {
+					if (temp.checksum != calculateAdler32(temp.data.get(), temp.dataSize)) {
+						throw Res2hException(std::string("loadFile() - Bad checksum for \"") + filePath + "\".");
+					}
+				}
+			}
+			else {
 				//try to open disk file
 				temp = loadFileFromDisk(temp.filePath);
-            }
-            //loaded. if the user wants to cache the data, add it to our map, else just return it and it will be freed eventually
-            if (keepInCache) {
-                rmIt->second.data = temp.data;
-            }
-            return temp;
-        }
-    }
+			}
+			//loaded. if the user wants to cache the data, add it to our map, else just return it and it will be freed eventually
+			if (keepInCache) {
+				rmIt->second.data = temp.data;
+			}
+			return temp;
+		}
+	}
 	//when we get here the file was not in the map. try to load it
 	if (filePath.find_first_of(":/") == 0) {
 		//archive file. we can't load files from archives we have no directory for. notify caller.
@@ -288,7 +288,7 @@ Res2h::ResourceEntry Res2h::loadFile(const std::string & filePath, bool keepInCa
 		temp = loadFileFromDisk(temp.filePath);
 		//loaded. if the user wants to cache the data, add it to our map, else just return it and it will be freed eventually
 		if (keepInCache) {
-            resourceMap[temp.filePath] = temp;
+			resourceMap[temp.filePath] = temp;
 		}
 	}
 	return temp;
@@ -318,15 +318,15 @@ Res2h::ResourceEntry Res2h::getResource(size_t index)
 
 void Res2h::releaseCache()
 {
-    //erase all allocated data in resource map
-    auto rmIt = resourceMap.begin();
-    while (rmIt != resourceMap.end()) {
-        if (rmIt->second.data) {
-            //shared_ptr is valid, so there is allocated data. release our reference to it.
-            rmIt->second.data.reset();
-        }
-        ++rmIt;
-    }
+	//erase all allocated data in resource map
+	auto rmIt = resourceMap.begin();
+	while (rmIt != resourceMap.end()) {
+		if (rmIt->second.data) {
+			//shared_ptr is valid, so there is allocated data. release our reference to it.
+			rmIt->second.data.reset();
+		}
+		++rmIt;
+	}
 }
 
 uint32_t Res2h::calculateChecksum(const std::string & filePath, const size_t dataSize, uint32_t adler)

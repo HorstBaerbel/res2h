@@ -1,5 +1,5 @@
 @echo off
-echo ---------------------------------------------------------------------
+rmdir results /S /Q
 mkdir results
 echo ---------------------------------------------------------------------
 .\Release\res2h.exe .\test .\results -s -v -h .\results\resources.h -u .\results\resources.cpp

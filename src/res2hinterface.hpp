@@ -18,18 +18,18 @@ public:
 		std::shared_ptr<unsigned char> data; //!<Raw file content.
 		uint32_t dataSize; //!<Raw content size.
 		uint32_t dataOffset; //!<Raw content offset in binary res2h archive if any.
-        uint32_t checksum; //!<Checksum of raw content.
-        std::string archivePath; //!<Path on disk to binary res2h archive or to the file the archive is embeded in.
+		uint32_t checksum; //!<Checksum of raw content.
+		std::string archivePath; //!<Path on disk to binary res2h archive or to the file the archive is embeded in.
 		uint32_t archiveStart; //!<Offset of the archive data in the file (> 0 when an archive is embedded e.g. in an executable).
 
-        ResourceEntry() : dataSize(0), dataOffset(0), checksum(0), archiveStart(0) {}
+		ResourceEntry() : dataSize(0), dataOffset(0), checksum(0), archiveStart(0) {}
 	};
 
 private:
 	static std::map<std::string, ResourceEntry> resourceMap;
 
-    static ResourceEntry loadFileFromDisk(const std::string & filePath);
-    static ResourceEntry loadFileFromArchive(const Res2h::ResourceEntry & entry);
+	static ResourceEntry loadFileFromDisk(const std::string & filePath);
+	static ResourceEntry loadFileFromArchive(const Res2h::ResourceEntry & entry);
 
 public:
 	/*
@@ -72,7 +72,7 @@ public:
 
 	/*!
 	Release all cached data. Keeps directories in memory.
-    \note This releases the shared_ptr to the data. If you keep more instances of that shared_ptr, memory will NOT be freed!
+	\note This releases the shared_ptr to the data. If you keep more instances of that shared_ptr, memory will NOT be freed!
 	*/
 	static void releaseCache();
 
@@ -96,7 +96,7 @@ class Res2hException : public std::exception
 	Res2hException();
 
 public:
-    Res2hException(const char * errorString) throw();
+	Res2hException(const char * errorString) throw();
 	Res2hException(const std::string & errorString) throw();
 
 	virtual const char* what() const throw();

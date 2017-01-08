@@ -10,6 +10,8 @@ It should compile and work at least in Windows, Ubuntu and Raspbian.
 
 **run_test** is a script that lets you test res2h and res2hdump after compiling. It uses res2h with some options to create C++ files and a binary archive from example files in /test. It then unpacks this archive to /results again.
 
+**unittest** does the same thing in an executable. It is a good example on how to use the re2h functions.
+
 License
 ========
 
@@ -25,17 +27,7 @@ cmake .
 make
 </pre>
 
-Visual Studio 2013, G++ 4.7 or Clang 3.3 (for C++11), boost-filesystem and boost-system (> v1.49) are needed to compile "res2h" and "res2hdump" (but not the "res2hinterface"). For installing G++ 4.7 see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
-Install the boost packages with:
-```
-sudo apt-get install libboost-filesystem-dev
-sudo apt-get install libboost-system-dev
-```
-or
-```
-sudo apt-get install libboost-all-dev
-```
-to get all of boost.
+Visual Studio 2015, G++ 5.4 or Clang 3.9 (C++11 support) are needed. "res2h" and "res2hdump" use std::filesystem, but not the "res2hinterface" you use in your application. For installing a new G++ version see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
 
 Usage - res2h
 ========

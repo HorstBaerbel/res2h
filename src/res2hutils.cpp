@@ -8,7 +8,7 @@ uint32_t calculateAdler32(const unsigned char * data, const size_t dataSize, uin
 	uint32_t s1 = adler & 0xffff;
 	uint32_t s2 = (adler >> 16) & 0xffff;
 	//calculate checksum for buffer
-	for (std::streamsize n = 0; n < dataSize; n++) {
+	for (size_t n = 0; n < dataSize; n++) {
 		s1 = (s1 + data[n]) % 65521;
 		s2 = (s2 + s1) % 65521;
 	}
@@ -23,10 +23,10 @@ uint32_t calculateAdler32(const std::string & filePath, const size_t dataSize, u
 	inStream.open(filePath, std::ifstream::in | std::ifstream::binary);
 	if (inStream.is_open() && inStream.good()) {
 		//loop until EOF or dataSize reached
-		std::streamsize rollingSize = 0;
+		size_t rollingSize = 0;
 		while (!inStream.eof() && inStream.good()) {
 			unsigned char buffer[1024];
-			std::streamsize readSize = sizeof(buffer);
+			size_t readSize = sizeof(buffer);
 			try {
 				//try reading data from input file
 				inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
@@ -39,7 +39,7 @@ uint32_t calculateAdler32(const std::string & filePath, const size_t dataSize, u
 				readSize = dataSize - rollingSize;
 			}
 			//calculate checksum for buffer
-			adler = calculateAdler32((const unsigned char*)&buffer, (size_t)readSize, adler);
+			adler = calculateAdler32((const unsigned char*)&buffer, readSize, adler);
 			//update size already read
 			rollingSize += readSize;
 			if (dataSize > 0 && rollingSize >= dataSize) {
