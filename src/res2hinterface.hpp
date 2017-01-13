@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <memory>
-#include <map>
+#include <vector>
 #include <exception>
 
 #include "res2h.h"
@@ -25,9 +25,9 @@ public:
 	virtual const std::string & whatString() const throw();
 };
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
-/*
+/*!
 This is the templated main interface class to read files from disk or from res2h archives.
 The template parameter defines the maximum size the archive and files can have.
 Loading a file or a binary archive bigger that 4GB with Res2h<uint32_t> will throw an exception.
@@ -40,49 +40,47 @@ template <typename T>
 class Res2h
 {
 public:
-	struct ResourceEntry
+	struct ResourceInfo
 	{
-		std::string filePath; //!<Name of file. If it starts with ":/" it is considered an internal file in a binary res2h archive.
-		std::shared_ptr<uint8_t> data; //!<Raw file content.
-		T dataSize = 0; //!<Raw content size.
-		T dataOffset = 0; //!<Raw content offset in binary res2h archive if any (Start of data = offsetInFile + dataOffset).
-		T checksum = 0; //!<Fletcher-32/64 Checksum of raw content.
-		std::string archivePath; //!<Path on disk to binary res2h archive or to the file the archive is embedded in.
-		T offsetInFile = 0; //!<Offset of the archive data in the file (> 0 when an archive is embedded e.g. in an executable).
+		std::string filePath; // !<Name of file. If it starts with ":/" it is considered an internal file in a binary res2h archive.
+		std::shared_ptr<uint8_t> data; // !<Raw file content.
+		T dataSize = 0; // !<Raw content size.
+		T dataOffset = 0; // !<Raw content offset in binary res2h archive if any (Start of data = archive.offsetInFile + entry.dataOffset).
+		T checksum = 0; // !<Fletcher-32/64 checksum of raw content.
 	};
 
 	struct ArchiveInfo
 	{
-		bool valid = false;
-		std::string archivePath; //!<Path on disk to binary res2h archive or to the file the archive is embedded in.
-		T offsetInFile = 0; //!<Offset of the start of the archive in the file (> 0 when an archive is embedded e.g. in an executable).
-		uint32_t fileVersion = 0; //!<File format version (currently 2).
-		uint32_t formatFlags = 0; //!<File option flags.
-		uint8_t bits = 0; //!<Archive bit depth (32/64).
-		T size = 0; //!<Overall size of archive data.
-		T checksum = 0; //!<Archive checksum.
+		std::string filePath; // !<Path on disk to binary res2h archive or to the file the archive is embedded in.
+		T offsetInFile = 0; // !<Offset of the start of the archive in the file (> 0 when an archive is embedded e.g. in an executable).
+		uint32_t fileVersion = 0; // !<File format version (currently 2).
+		uint32_t formatFlags = 0; // !<File option flags.
+		uint8_t bits = 0; // !<Archive bit depth (32/64).
+		T size = 0; // !<Overall size of archive data.
+		T checksum = 0; // !<Fletcher-32/64 archive checksum.
+		std::vector<ResourceInfo> resources; // !<The list of all resources in this archive.
 	};
 
-	/*
+	/*!
 	Return an instance of the singleton Res2h object.
 	\return The Res2h object.
 	*/
-	static Res2h & getInstance() { static Res2h<T> instance;	return instance; }
+	static Res2h & instance();
 
-	/*
+	/*!
 	Try to find archive header in an archive file or an embedded archive.
 	\param[in] archivePath Archive path.
 	\return Returns offset if archive can be opened and its magic bytes header is found. Throws an exception otherwise.
 	*/
-	T findArchiveStartOffset(const std::string & archivePath);
+	T findArchiveStartOffset(const std::string & archivePath) const;
 
-	/*
+	/*!
 	Try to read archive header from an archive file or an embedded archive.
 	\param[in] archivePath Archive path.
 	\param[in] magicOffset Offset to magic bytes.
 	\return Returns archive info if archive can be opened and information read properly. Throws an exception otherwise.
 	*/
-	ArchiveInfo readArchiveInfo(const std::string & archivePath);
+	ArchiveInfo getArchiveInfo(const std::string & archivePath) const;
 
 	/*!
 	Open archive file or file with embedded archive from disk and load directory into memory. 
@@ -101,20 +99,13 @@ public:
 	\return Returns a struct containing the data or throws an exception if it fails to do so.
 	\note When loading data from a binary archive, you must load the archive with \loadArchive before.
 	*/
-	ResourceEntry loadFile(const std::string & filePath, bool keepInCache = false, bool checkChecksum = true);
+	ResourceInfo loadResource(const std::string & filePath, bool keepInCache = false, bool checkChecksum = true);
 
 	/*!
-	Return the number of resources currently in the map.
-	\return Returns the number of resources currently loaded.
+	Return information about all resources on disk and in archive, loaded or not.
+	\return Returns information about all resources on disk and in archive, loaded or not.
 	*/
-	uint32_t getNrOfResources();
-
-	/*!
-	Return a resource from the map.
-	\param[in] index The index of the resource to return.
-	\return Returns the index'th resource from the map.
-	*/
-	ResourceEntry getResource(uint32_t index);
+	std::vector<ResourceInfo> getResourceInfo() const;
 
 	/*!
 	Release all cached data. Keeps directories in memory.
@@ -123,194 +114,188 @@ public:
 	void releaseCache();
 
 private:
-	//!<Cache holding the resource entries.
-	std::map<std::string, ResourceEntry> m_resourceMap;
-	//!<Load a file from disk.
-	ResourceEntry loadFileFromDisk(const std::string & filePath);
-	//!<Load a file from a binary archive.
-	ResourceEntry loadFileFromArchive(const ResourceEntry & entry);
+	// !<Load a resource from disk.
+	ResourceInfo loadResourceFromDisk(const std::string & filePath);
+	// !<Load a resource from a binary archive.
+	ResourceInfo loadResourceFromArchive(const ResourceInfo & entry, const ArchiveInfo & archive, bool checkChecksum = true);
+
+	// !<Cache holding the archive entries.
+	std::vector<ArchiveInfo> m_archives;
+	// !<Cache holding the on-disk resources.
+	std::vector<ResourceInfo> m_diskResources;
 };
 
-//-----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 template<typename T>
 bool Res2h<T>::loadArchive(const std::string & archivePath)
 {
-	//make hash from archive path
-	T pathHash = calculateFletcher<uint32_t>(archivePath);
-	//check if there are entries for this archive already in the map and delete them
-	auto rmIt = m_resourceMap.begin();
-	while (rmIt != m_resourceMap.end())
+	// check if there are entries for this archive already in the map and delete them
+	auto aIt = m_archives.begin();
+	while (aIt != m_archives.end())
 	{
-		if (rmIt->second.archivePath == archivePath)
+		if (aIt->filePath == archivePath)
 		{
-			//'tis from this archive. erase.
-			rmIt = m_resourceMap.erase(rmIt);
+			// 'tis from this archive. erase and reload info
+			aIt = m_archives.erase(aIt);
 		}
 		else
 		{
-			++rmIt;
+			++aIt;
 		}
 	}
-	//try to find archive in file
-	ArchiveInfo info;
-	try
-	{
-		info = readArchiveInfo(archivePath);
-	}
-	catch (Res2hException e)
-	{
-		return false;
-	}
-	//open archive
+	// try to find archive in file. this will throw if it fails
+	ArchiveInfo info = getArchiveInfo(archivePath);
+	// open archive
 	std::ifstream inStream;
 	inStream.open(archivePath, std::ifstream::in | std::ifstream::binary);
 	if (inStream.is_open() && inStream.good())
 	{
-		//file version ok. skip currently unused flags and archive size
-		inStream.seekg(info.offsetInFile + info.bits == 64 ? RES2H_OFFSET_NO_OF_FILES_64 : RES2H_OFFSET_NO_OF_FILES_32);
-		//read number of directory entries
+		// file version ok. skip currently unused flags and archive size
+		inStream.seekg(info.offsetInFile + (info.bits == 64 ? RES2H_OFFSET_NO_OF_FILES_64 : RES2H_OFFSET_NO_OF_FILES_32));
+		// read number of directory entries
 		uint32_t nrOfDirectoryEntries = 0;
 		inStream.read(reinterpret_cast<char *>(&nrOfDirectoryEntries), sizeof(uint32_t));
 		if (nrOfDirectoryEntries > 0)
 		{
 			for (uint32_t i = 0; i < nrOfDirectoryEntries; ++i)
 			{
-				//read directory to map
-				ResourceEntry temp;
-				//read size of name
-				uint32_t sizeOfName = 0;
-				inStream.read(reinterpret_cast<char *>(&sizeOfName), sizeof(uint32_t));
-				//read name itself
-				std::string filePath;
-				filePath.resize(sizeOfName);
-				inStream.read(reinterpret_cast<char *>(&filePath[0]), sizeOfName - 1);
-				//skip the null-terminator
-				inStream.seekg(1, std::ios::cur);
-				//clear data pointer
+				// read directory
+				ResourceInfo temp;
+				// read size of name
+				uint16_t sizeOfName = 0;
+				inStream.read(reinterpret_cast<char *>(&sizeOfName), sizeof(uint16_t));
+				// read name itself
+				temp.filePath.resize(sizeOfName);
+				inStream.read(reinterpret_cast<char *>(&temp.filePath[0]), sizeOfName);
+				// clear data pointer
 				temp.data = nullptr;
-				//skip currently unused flags
+				// skip currently unused flags
 				inStream.seekg(sizeof(uint32_t), std::ios::cur);
-				//read size of data
-				inStream.read(reinterpret_cast<char *>(&temp.dataSize), sizeof(T));
-				//read offset to start of data
-				inStream.read(reinterpret_cast<char *>(&temp.dataOffset), sizeof(T));
-				//read data checksum
-				inStream.read(reinterpret_cast<char *>(&temp.checksum), sizeof(T));
-				//add archive path and offset
-				temp.archivePath = archivePath;
-				temp.offsetInFile = info.offsetInFile;
-				//add to map
-				m_resourceMap[filePath] = temp;
+				// read size of data
+				inStream.read(reinterpret_cast<char *>(&temp.dataSize), (info.bits == 64 ? sizeof(uint64_t) : sizeof(uint32_t)));
+				// read offset to start of data
+				inStream.read(reinterpret_cast<char *>(&temp.dataOffset), (info.bits == 64 ? sizeof(uint64_t) : sizeof(uint32_t)));
+				// read data checksum
+				inStream.read(reinterpret_cast<char *>(&temp.checksum), (info.bits == 64 ? sizeof(uint64_t) : sizeof(uint32_t)));
+				// add to resources
+				info.resources.push_back(temp);
 			}
-			//close file
+			// close file
 			inStream.close();
+			m_archives.push_back(info);
 			return true;
 		}
 		else
 		{
 			inStream.close();
-			throw Res2hException(std::string("loadArchive() - Archive \"") + archivePath + "\" contains no files!");
+			throw Res2hException(std::string("Archive \"") + archivePath + "\" contains no files!");
 		}
 	}
 	else
 	{
-		throw Res2hException(std::string("loadArchive() - Failed to open archive \"") + archivePath + "\" for reading.");
+		throw Res2hException(std::string("Failed to open archive \"") + archivePath + "\" for reading.");
 	}
 	return false;
 }
 
 template<typename T>
-typename Res2h<T>::ResourceEntry Res2h<T>::loadFile(const std::string & filePath, bool keepInCache, bool checkChecksum)
+typename Res2h<T>::ResourceInfo Res2h<T>::loadResource(const std::string & filePath, bool keepInCache, bool checkChecksum)
 {
-	ResourceEntry temp;
-	//check if from archive
-	bool fromArchive = filePath.find_first_of(":/") == 0;
-	//find file in the map
-	auto rmIt = m_resourceMap.find(filePath);
-	if (rmIt != m_resourceMap.end())
+	ResourceInfo temp;
+	// check if from archive or disk
+	const bool fromArchive = filePath.find_first_of(":/") == 0;
+	if (fromArchive)
 	{
-		//found. check if still in memory.
-		temp = rmIt->second;
-		if (temp.data)
+		// find file in the archive
+		for (auto & archive : m_archives)
 		{
-			//data is still valid. return it.
-			return temp;
-		}
-		//data needs to be loaded. check if archive file
-		if (fromArchive)
-		{
-			//yes. try to load archive
-			temp = loadFileFromArchive(temp);
-			//calculate checksum if user wants to
-			if (checkChecksum)
+			for (auto & resource : archive.resources)
 			{
-				if (temp.checksum != calculateFletcher<uint64_t>(temp.data.get(), temp.dataSize))
+				if (resource.filePath == filePath)
 				{
-					throw Res2hException(std::string("loadFile() - Bad checksum for \"") + filePath + "\".");
+					// file found. check if data is in memory
+					if (resource.data)
+					{
+						return resource;
+					}
+					else
+					{
+						// no. load data first
+						auto tempEntry = loadResourceFromArchive(resource, archive, checkChecksum);
+						if (keepInCache)
+						{
+							resource = tempEntry;
+						}
+						return tempEntry;
+					}
 				}
 			}
 		}
-		else
-		{
-			//try to open disk file
-			temp = loadFileFromDisk(temp.filePath);
-		}
-		//loaded. if the user wants to cache the data, add it to our map, else just return it and it will be freed eventually
-		if (keepInCache)
-		{
-			rmIt->second.data = temp.data;
-		}
-		return temp;
-	}
-	//when we get here the file was not in the map. try to load it
-	if (fromArchive)
-	{
-		//archive file. we can't load files from archives we have no directory for. notify caller.
-		throw Res2hException(std::string("loadFile() - File \"") + filePath + "\" is unkown. Please use loadArchive() first.");
 	}
 	else
 	{
-		//try to open disk file
-		temp = loadFileFromDisk(temp.filePath);
-		//loaded. if the user wants to cache the data, add it to our map, else just return it and it will be freed eventually
-		if (keepInCache)
+		// find file in the disk resources list
+		for (auto & resource : m_diskResources)
 		{
-			m_resourceMap[temp.filePath] = temp;
+			if (resource.filePath == filePath)
+			{
+				// file found. check if data is in memory
+				if (resource.data)
+				{
+					return resource;
+				}
+				else
+				{
+					// no. load data first
+					auto tempEntry = loadResourceFromDisk(filePath);
+					if (keepInCache)
+					{
+						resource = tempEntry;
+					}
+					return tempEntry;
+				}
+			}
 		}
 	}
-	return temp;
+	// when we get here the file was not in any archive
+	if (fromArchive)
+	{
+		// archive file. we can't load files from archives we have no directory for. notify caller.
+		throw Res2hException(std::string("File \"") + filePath + "\" is unknown. Please use loadArchive() first.");
+	}
+	throw Res2hException(std::string("Failed to load file \"") + filePath + "\".");
 }
 
 template<typename T>
-typename Res2h<T>::ResourceEntry Res2h<T>::loadFileFromDisk(const std::string & filePath)
+typename Res2h<T>::ResourceInfo Res2h<T>::loadResourceFromDisk(const std::string & filePath)
 {
-	ResourceEntry temp;
-	//try to open file
+	ResourceInfo temp;
+	// try to open file
 	std::ifstream inStream;
 	inStream.open(filePath, std::ifstream::in | std::ifstream::binary);
 	if (inStream.is_open() && inStream.good())
 	{
-		//opened ok. check file size
+		// opened ok. check file size
 		inStream.seekg(0, std::ios::end);
 		size_t fileSize = (size_t)inStream.tellg();
 		inStream.seekg(0);
 		if (fileSize > 0)
 		{
-			//allocate data
+			// allocate data
 			std::shared_ptr<unsigned char> fileData = std::shared_ptr<unsigned char>(new unsigned char[fileSize], [](unsigned char *p) { delete[] p; });
-			//try reading data
+			// try reading data
 			try
 			{
 				inStream.read(reinterpret_cast<char *>(fileData.get()), fileSize);
 			}
 			catch (std::ios_base::failure) { /*reading didn't work properly. salvage what we can.*/ }
-			//check how many bytes were actually read
+			// check how many bytes were actually read
 			if (inStream.gcount() != fileSize)
 			{
-				throw Res2hException(std::string("loadFileFromDisk() - Failed to read file \"") + filePath + "\".");
+				throw Res2hException(std::string("Failed to read file \"") + filePath + "\".");
 			}
-			//seems to have worked. store data.
+			// seems to have worked. store data.
 			temp.filePath = filePath;
 			temp.data = fileData;
 			temp.dataSize = fileSize;
@@ -318,67 +303,66 @@ typename Res2h<T>::ResourceEntry Res2h<T>::loadFileFromDisk(const std::string & 
 	}
 	else
 	{
-		throw Res2hException(std::string("loadFileFromDisk() - Failed to open file \"") + filePath + "\" for reading.");
+		throw Res2hException(std::string("Failed to open file \"") + filePath + "\" for reading.");
 	}
 	return temp;
 }
 
 template<typename T>
-typename Res2h<T>::ResourceEntry Res2h<T>::loadFileFromArchive(const ResourceEntry & entry)
+typename Res2h<T>::ResourceInfo Res2h<T>::loadResourceFromArchive(const ResourceInfo & entry, const ArchiveInfo & archive, bool checkChecksum)
 {
-	ResourceEntry temp = entry;
-	//try to open archive file
+	ResourceInfo temp = entry;
+	// try to open archive file
 	std::ifstream inStream;
-	inStream.open(temp.archivePath, std::ifstream::in | std::ifstream::binary);
+	inStream.open(archive.filePath, std::ifstream::in | std::ifstream::binary);
 	if (inStream.is_open() && inStream.good())
 	{
-		//opened ok. move to data offset
-		inStream.seekg(temp.offsetInFile + temp.dataOffset);
-		//allocate data
+		// opened ok. move to data offset
+		inStream.seekg(archive.offsetInFile + temp.dataOffset);
+		// allocate data
 		temp.data = std::shared_ptr<unsigned char>(new unsigned char[temp.dataSize], [](unsigned char *p) { delete[] p; });
-		//try reading data
+		// try reading data
 		try
 		{
 			inStream.read(reinterpret_cast<char *>(temp.data.get()), temp.dataSize);
 		}
 		catch (std::ios_base::failure) { /*reading didn't work properly. salvage what we can.*/ }
-		//check how many bytes were actually read
+		// check how many bytes were actually read
 		if (inStream.gcount() != temp.dataSize)
 		{
-			throw Res2hException(std::string("loadFileFromArchive() - Failed to read \"") + temp.filePath + "\" from archive.");
+			throw Res2hException(std::string("Failed to read \"") + temp.filePath + "\" from archive.");
+		}
+		//  now that we're here, do a checksum
+		if (checkChecksum)
+		{
+			T dataCheckum = (archive.bits == 64 ? calculateFletcher<uint64_t>(temp.data.get(), temp.dataSize) : calculateFletcher<uint32_t>(temp.data.get(), static_cast<uint32_t>(temp.dataSize)));
+			if (temp.checksum != dataCheckum)
+			{
+				throw Res2hException(std::string("Failed to read \"") + temp.filePath + "\" from archive. Bad checksum!");
+			}
 		}
 	}
 	else
 	{
-		throw Res2hException(std::string("loadFileFromArchive() - Failed to open archive \"") + temp.archivePath + "\" for reading.");
+		throw Res2hException(std::string("Failed to open archive \"") + archive.filePath + "\" for reading.");
 	}
 	return temp;
 }
 
 template<typename T>
-uint32_t Res2h<T>::getNrOfResources()
+std::vector<typename Res2h<T>::ResourceInfo> Res2h<T>::getResourceInfo() const
 {
-	return static_cast<uint32_t>(m_resourceMap.size());
-}
-
-template<typename T>
-typename Res2h<T>::ResourceEntry Res2h<T>::getResource(uint32_t index)
-{
-	if (index < m_resourceMap.size())
+	std::vector<Res2h::ResourceInfo> result;
+	for (auto & archive : m_archives)
 	{
-		auto rmIt = m_resourceMap.cbegin();
-		advance(rmIt, index);
-		if (rmIt != m_resourceMap.end())
+		for (auto & resource : archive.resources)
 		{
-			return rmIt->second;
-		}
-		else
-		{
-			throw Res2hException(std::string("getFile() - Index ") + std::to_string((long long)index) + " out of bounds! Map has " + std::to_string((long long)m_resourceMap.size()) + "files.");
+			result.push_back(resource);
 		}
 	}
-	else
+	for (auto & resource : m_diskResources)
 	{
-		throw Res2hException(std::string("getFile() - Index ") + std::to_string((long long)index) + " out of bounds! Map has " + std::to_string((long long)m_resourceMap.size()) + "files.");
+		result.push_back(resource);
 	}
+	return result;
 }

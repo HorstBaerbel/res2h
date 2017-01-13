@@ -2,13 +2,13 @@
 
 
 template<>
-uint16_t calculateFletcher(const uint8_t * data, const uint64_t dataSize, uint16_t checksum)
+uint16_t calculateFletcher(const uint8_t * data, const uint16_t dataSize, uint16_t checksum)
 {
 	// calculate how many full double words the input has
 	uint8_t sum1 = static_cast<uint8_t>(checksum);
 	uint8_t sum2 = static_cast<uint8_t>(checksum >> 8);
 	// now calculate the fletcher32 checksum from double words
-	for (uint64_t index = 0; index < dataSize; ++index)
+	for (uint16_t index = 0; index < dataSize; ++index)
 	{
 		sum1 += data[index];
 		sum2 += sum1;
@@ -18,20 +18,21 @@ uint16_t calculateFletcher(const uint8_t * data, const uint64_t dataSize, uint16
 }
 
 template<>
-uint32_t calculateFletcher(const uint8_t * data, const uint64_t dataSize, uint32_t checksum)
+uint32_t calculateFletcher(const uint8_t * data, const uint32_t dataSize, uint32_t checksum)
 {
 	// calculate how many full double words the input has
-	const uint64_t words = dataSize / 2;
+	const uint32_t words = dataSize / 2;
 	uint16_t sum1 = static_cast<uint16_t>(checksum);
 	uint16_t sum2 = static_cast<uint16_t>(checksum >> 16);
 	// now calculate the fletcher32 checksum from double words
-	for (uint64_t index = 0; index < words; ++index)
+	const uint16_t * data16 = reinterpret_cast<const uint16_t*>(data);
+	for (uint32_t index = 0; index < words; ++index)
 	{
-		sum1 += data[index];
+		sum1 += data16[index];
 		sum2 += sum1;
 	}
 	// calculate how many extra bytes, that do not fit into a double word, the input has
-	const uint64_t remainingBytes = dataSize - words * 2;
+	const uint32_t remainingBytes = dataSize - words * 2;
 	if (remainingBytes > 0)
 	{
 		// copy the excess byte to our dummy variable
@@ -53,9 +54,10 @@ uint64_t calculateFletcher(const uint8_t * data, const uint64_t dataSize, uint64
 	uint32_t sum1 = static_cast<uint32_t>(checksum);
 	uint32_t sum2 = static_cast<uint32_t>(checksum >> 32);
 	// now calculate the fletcher64 checksum from double words
+	const uint32_t * data32 = reinterpret_cast<const uint32_t*>(data);
 	for (uint64_t index = 0; index < dwords; ++index)
 	{
-		sum1 += data[index];
+		sum1 += data32[index];
 		sum2 += sum1;
 	}
 	// calculate how many extra bytes, that do not fit into a double word, the input has
