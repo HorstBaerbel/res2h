@@ -16,7 +16,7 @@
 #include <stdlib.h> // for system()
 
 #include "res2h.h"
-#include "checksum.hpp"
+#include "checksum.h"
 
 
 struct FileData

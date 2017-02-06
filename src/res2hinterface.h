@@ -5,8 +5,10 @@
 #include <memory>
 #include <vector>
 #include <exception>
+#include <fstream>
 
 #include "res2h.h"
+#include "checksum.h"
 
 /*
 Exceptions thrown by Res2h when something goes wrong.

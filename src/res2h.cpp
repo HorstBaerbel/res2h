@@ -14,7 +14,7 @@ namespace FS_NAMESPACE = std::tr2::sys;
 #endif
 
 #include "res2h.h"
-#include "checksum.hpp"
+#include "checksum.h"
 
 
 struct FileData

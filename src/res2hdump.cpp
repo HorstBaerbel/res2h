@@ -9,8 +9,8 @@ namespace FS_NAMESPACE = std::experimental::filesystem;
 namespace FS_NAMESPACE = std::tr2::sys;
 #endif
 
-#include "res2hinterface.hpp"
-#include "checksum.hpp"
+#include "res2hinterface.h"
+#include "checksum.h"
 
 
 bool beVerbose = false;

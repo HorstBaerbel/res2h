@@ -1,17 +1,15 @@
-#include "res2hinterface.hpp"
+#include "res2hinterface.h"
 
 #include <climits>
-#include <fstream>
 
-#include "checksum.hpp"
-
-
+template<>
 Res2h<uint32_t> & Res2h<uint32_t>::instance()
 {
 	static Res2h<uint32_t> instance;
 	return instance;
 }
 
+template<>
 Res2h<uint64_t> & Res2h<uint64_t>::instance()
 {
 	static Res2h<uint64_t> instance;

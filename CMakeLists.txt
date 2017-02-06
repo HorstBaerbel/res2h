@@ -31,7 +31,7 @@ endif()
 
 set(R2H_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.h
 )
 
 set(R2H_SOURCES
@@ -41,8 +41,8 @@ set(R2H_SOURCES
 
 #define headers and sources for dump executable
 set(R2H_DUMP_HEADERS
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.h
+	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.h
 )
 
 set(R2H_DUMP_SOURCES
