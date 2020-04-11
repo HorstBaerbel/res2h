@@ -10,8 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
 	#set up compiler flags for Clang
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O2") #support C++14 for std::, optimize
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2 -s") #optimize, strip binary
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14") #support C++14
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
 	#check for G++ 8.0+
 	execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE G++_VERSION)
@@ -19,8 +18,7 @@ elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
 			message(SEND_ERROR "You need at least g++ 8 to compile res2h!")
 	endif()
 	#set up compiler flags for GCC
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O2") #support C++14 for std::, optimize
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2 -s") #optimize, strip binary
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14") #support C++14
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
 	set(CMAKE_DEBUG_POSTFIX "d")
 	add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
@@ -30,42 +28,43 @@ elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
 endif()
 
 #-------------------------------------------------------------------------------
+set(PROJECT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
 
 #define basic sources and headers
 set(R2H_HEADERS
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.h
+	${PROJECT_SOURCE_DIR}/res2h.h
+	${PROJECT_SOURCE_DIR}/checksum.h
 )
 
 set(R2H_SOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.cpp
+	${PROJECT_SOURCE_DIR}/res2h.cpp
+	${PROJECT_SOURCE_DIR}/checksum.cpp
 )
 
 #define headers and sources for dump executable
 set(R2H_DUMP_HEADERS
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.h
-	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.h
+	${PROJECT_SOURCE_DIR}/res2hinterface.h
+	${PROJECT_SOURCE_DIR}/checksum.h
 )
 
 set(R2H_DUMP_SOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hdump.cpp
+	${PROJECT_SOURCE_DIR}/res2hinterface.cpp
+	${PROJECT_SOURCE_DIR}/res2hdump.cpp
 )
 
 set(R2H_DUMP_SOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hinterface.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2hdump.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.cpp
+	${PROJECT_SOURCE_DIR}/res2hinterface.cpp
+	${PROJECT_SOURCE_DIR}/res2hdump.cpp
+	${PROJECT_SOURCE_DIR}/checksum.cpp
 )
 
 #define headers and sources for unit test executable
 set(R2H_UNITTEST_HEADERS
-	${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
+	${PROJECT_SOURCE_DIR}/res2h.h
 )
 
 set(R2H_UNITTEST_SOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/src/test.cpp
+	${PROJECT_SOURCE_DIR}/test.cpp
 )
 
 #-------------------------------------------------------------------------------
@@ -73,7 +72,7 @@ set(R2H_UNITTEST_SOURCES
 
 if(MSVC)
 	LIST(APPEND R2H_SOURCES
-		${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.rc
+		${PROJECT_SOURCE_DIR}/res2h.rc
 	)
 endif()
 
@@ -87,14 +86,12 @@ if (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
 endif()
 
 #-------------------------------------------------------------------------------
-#set up build directories
-
-set(dir ${CMAKE_CURRENT_SOURCE_DIR})
-set(EXECUTABLE_OUTPUT_PATH ${dir} CACHE PATH "Build directory" FORCE)
-set(LIBRARY_OUTPUT_PATH ${dir} CACHE PATH "Build directory" FORCE)
-
-#-------------------------------------------------------------------------------
 #define target
+
+# Make sure we build in release mode by default
+if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+endif()
 
 include_directories(${R2H_INCLUDE_DIRS})
 add_executable(res2h ${R2H_SOURCES} ${R2H_HEADERS})
