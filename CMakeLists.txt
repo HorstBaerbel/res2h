@@ -1,22 +1,25 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.1)
 
 project(res2h)
+
+# Make sure we generate a compile command database for clang-tidy
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 #-------------------------------------------------------------------------------
 #set up compiler flags and excutable names
 
 if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
 	#set up compiler flags for Clang
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2") #support C++11 for std::, optimize
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O2") #support C++14 for std::, optimize
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2 -s") #optimize, strip binary
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
-	#check for G++ 5.4+
+	#check for G++ 8.0+
 	execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE G++_VERSION)
-	if (G++_VERSION VERSION_LESS 5.4)
-			message(SEND_ERROR "You need at least G++ 5.4 to compile res2h!")
+	if (G++_VERSION VERSION_LESS 8.0)
+			message(SEND_ERROR "You need at least g++ 8 to compile res2h!")
 	endif()
 	#set up compiler flags for GCC
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2") #support C++11 for std::, optimize
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O2") #support C++14 for std::, optimize
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -O2 -s") #optimize, strip binary
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
 	set(CMAKE_DEBUG_POSTFIX "d")
@@ -27,8 +30,8 @@ elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
 endif()
 
 #-------------------------------------------------------------------------------
-#define basic sources and headers
 
+#define basic sources and headers
 set(R2H_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/res2h.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/checksum.h
@@ -104,16 +107,3 @@ target_link_libraries(res2hdump ${R2H_LIBRARIES})
 #add unit test executable to project
 add_executable(unittest ${R2H_UNITTEST_SOURCES} ${R2H_UNITTEST_HEADERS})
 target_link_libraries(unittest ${R2H_LIBRARIES})
-
-#-------------------------------------------------------------------------------
-#special properties for windows builds
-if(MSVC)
-	#create console application
-	#Note that up to CMake 2.8.11.2 this feature is broken: http://public.kitware.com/Bug/view.php?id=12566
-	set_target_properties(res2h PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
-	set_target_properties(res2h PROPERTIES COMPILE_DEFINITIONS_DEBUG "_CONSOLE")
-	set_target_properties(res2h PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
-	set_target_properties(res2h PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "_CONSOLE")
-	set_target_properties(res2h PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:CONSOLE")
-	set_target_properties(res2h PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:CONSOLE")
-endif()

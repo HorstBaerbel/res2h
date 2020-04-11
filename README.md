@@ -1,50 +1,54 @@
-res2h
-========
+# A flexible resource compiler similar to bin2h
 
-**tl;dr:** Load binary data from arbitrary files and convert it to a raw hex C/C++ array for compiling into your software, or bundle the data from all the files in a binary archive. It is inspired by [bin2h](http://code.google.com/p/bin2h/) with added functionality.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![Build](https://github.com/HorstBaerbel/res2h/workflows/Build/badge.svg) ![Clang-format](https://github.com/HorstBaerbel/res2h/workflows/Clang-format/badge.svg) ![Clang-tidy](https://github.com/HorstBaerbel/res2h/workflows/clang-tidy/badge.svg)
 
-**res2h** can convert binary data from files to a raw hex arrays in .c/.cpp source files which you can then include in your project and compile them into the executable. It can also create a common header that lets you access all the converted arrays with one include. If you don't want your data to be loaded into memory res2h also provides the possiblility to create one binary archive containing all the files which you can then access via the "Res2h" class provided in seperate headers. You can also embed this archive in your executable, so you only have one file, and access it like you would with any other archive on disk.
-It should compile and work at least in Windows, Ubuntu and Raspbian.
+**res2h** can:
 
-**res2hdump** is a tool that lets you dump information and/or files from a binary res2h archive or an archive embedded in another file, e.g. executable. It also serves as an example on how to use the "Res2h" class contained in the "res2hinterface" files.
+* Convert binary data from arbitrary files to a raw hex C/C++ arrays for including them into your software (similar to [bin2h](http://code.google.com/p/bin2h/) with added functionality).
+* Compile the data from all the files into one binary archive which you can then load from disk at runtime (using ) or append to the application executable.
 
-**run_test** is a script that lets you test res2h and res2hdump after compiling. It uses res2h with some options to create C++ files and a binary archive from example files in /test. It then unpacks this archive to /results again.
+The main tools are [res2h](#res2h) which can convert files to .h/.cpp files or pack them into binary archives and [res2hdump](#res2hdump) which lets you view or unpack those binary archives.
 
-**unittest** does the same thing in an executable.
+If you find a bug or make an improvement your pull requests are appreciated.
 
-License
-========
+# License
 
-[BSD-2-Clause](http://opensource.org/licenses/BSD-2-Clause), see LICENSE.md
+All of this is under the [MIT License](LICENSE).
 
-Building
-========
+# Prequisites
+
+* A C++14-capable compiler with support for std::filesystem. For installing a new g++ version see [this](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
+* CMake 3.1 or higher for building.
+
+# Building
 
 **Use CMake:**
-<pre>
+```sh
 cd res2h
 cmake .
 make
-</pre>
-
-Visual Studio 2015, G++ 5.4 or Clang 3.9 (C++11 support) are needed. "res2h" and "res2hdump" use std::filesystem, but not the "res2hinterface" you use in your application. For installing a new G++ version see [here](http://lektiondestages.blogspot.de/2013/05/installing-and-switching-gccg-versions.html).
-
-Usage - res2h
-========
-
-```
-res2h <infile/indir> <outfile/outdir> [options]
 ```
 
-**Valid options:**
-- -s Recurse into subdirectories below indir.
-- -c Use .c files and arrays for storing the data definitions, else uses .cpp files and std::vector/std::map.
-- -h <headerfile> Puts all declarations in the file "headerfile" using "extern" and includes that header file in the source files.
-- -u <sourcefile> Create utility functions and arrays in a .c/.cpp file. Only makes sense in combination with -h.
-- -1 Combine all converted files into one big .c/.cpp file (use together with -u).
-- -b Compile binary archive outfile containing all infile(s). For reading in your software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs.
-- -a Append infile to outfile. Can be used to append an archive to an executable.
-- -v Be verbose.
+# Usage
+
+## res2h
+
+res2h can convert binary data from files to a raw hex arrays in .c/.cpp source files which you can then include in your project and compile them into the executable. It can also create a common header that lets you access all the converted arrays with one include. If you don't want your data to be loaded into memory res2h also provides the possiblility to create one binary archive containing all the files which you can then access via the "Res2h" class provided in seperate headers. You can also embed this archive in your executable, so you only have one file, and access it like you would with any other archive on disk.
+It should compile and work at least in Windows, Ubuntu and Raspbian.
+
+```sh
+res2h INFILE/INDIR OUTFILE/OUTDIR [OPTIONS]
+```
+
+**Valid OPTIONS:**
+- **-s**: Recurse into subdirectories below indir.
+- **-c**: Use .c files and arrays for storing the data definitions, else uses .cpp files and std::vector/std::map.
+- **-h**: <headerfile> Puts all declarations in the file "headerfile" using "extern" and includes that header file in the source files.
+- **-u**: <sourcefile> Create utility functions and arrays in a .c/.cpp file. Only makes sense in combination with -h.
+- **-1**: Combine all converted files into one big .c/.cpp file (use together with -u).
+- **-b**: Compile binary archive outfile containing all infile(s). For reading in your software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs.
+- **-a**: Append infile to outfile. Can be used to append an archive to an executable.
+- **-v**: Be verbose.
 
 **Examples:**
 - Convert a single file: ```res2h ./lenna.png ./resources/lenna_png.cpp```
@@ -53,9 +57,9 @@ res2h <infile/indir> <outfile/outdir> [options]
 - Convert data to a binary archive: ```res2h ./data ./resources/data.bin -b```
 - Append an archive to an executable: ```res2h ./resources/data.bin ./program.exe -a```
 
-Output
-========
-##### e.g. "res2h a.x b_x.cpp -h bla.h" would create those files: #####
+## Output examples
+
+#### e.g. ```res2h a.x b_x.cpp -h bla.h``` would create those files: #####
 - **a_x.cpp:**
 
 ```
@@ -77,8 +81,8 @@ const uint8_t a_x_data[a_x_size] = {
 extern const uint32_t a_x_size;
 extern const uint8_t a_x_data[];
 ```
-========
-##### e.g. "res2h a.x b_x.cpp *-c* -h bla.h -u bla.cpp" would create a_x.cpp too, and: #####
+
+#### e.g. ```res2h a.x b_x.cpp *-c* -h bla.h -u bla.cpp``` would create a_x.cpp too, and: #####
 - **bla.h:**
 
 ```
@@ -110,8 +114,8 @@ const Res2hEntry res2hFiles[res2hNrOfFiles] = {
  {":/a.x", a_x_size, a_x_data}
 };
 ```
-========
-##### e.g. "res2h a.x b_x.cpp -h bla.h *-u bla.cpp*" would create a_x.cpp too, and: #####
+
+#### e.g. ```res2h a.x b_x.cpp -h bla.h *-u bla.cpp*``` would create a_x.cpp too, and: #####
 - **bla.h:**
 
 ```
@@ -155,8 +159,8 @@ res2hMapType::value_type mapTemp[] = {
 res2hMapType res2hMap(mapTemp, mapTemp + sizeof mapTemp / sizeof mapTemp[0]);
 ```
 
-Binary archive format
-========
+## Binary archive format
+
 <table>
     <tr>
         <th>Offset (decimal)</th><th>Type</th><th>Description</th>
@@ -211,24 +215,28 @@ Binary archive format
 You can read an archive from a file on disk, but also embed an archive in another file, e.g. your executable. For that use the "-a" option to append the archive to the executable (Please note that you can only have one embedded archive). For reading archive files or embedded archives include the files "res2hinterface.hpp/.cpp" and "res2hutils.hpp/.cpp" in your project. They provide all functions needed for reading resources from archives.
 You can find an example on how to use the functions in "res2hdump.cpp" resp. the "res2hdump" project.
 
-Usage - res2hdump
-========
+# res2hdump
+
+res2hdump is a tool that lets you dump information and/or files from a binary res2h archive or an archive embedded in another file, e.g. executable. It also serves as an example on how to use the "Res2h" class contained in the "res2hinterface" files.
 
 ```
-res2hdump <archive> [<outdir>] [options]
+res2hdump ARCHIVE [OUTDIR] [OPTIONS]
 ```
 
 **Valid options:**
-- -f Recreate path structure, creating directories as needed.
-- -i Display information about the archive and files, but don't extract anything.
-- -v Be verbose.
+- **-f**: Recreate path structure, creating directories as needed.
+- **-i**: Display information about the archive and files, but don't extract anything.
+- **-v**: Be verbose.
 
 **Examples:**
 - Display information about the archive: ```res2hdump ./resources/data.bin -i```
 - Extract all files from an archive with subdirectories: ```res2hdump ./resources/data.bin ./resources -f```
 - Extract files from embedded archive: ```res2hdump ./resources/program.exe ./resources```
 
-I found a bug or have suggestion
-========
+# run_test
+
+run_test is a script that lets you test res2h and res2hdump after compiling. It uses res2h with some options to create C++ files and a binary archive from example files in /test. It then unpacks this archive to /results again.
+
+# I found a bug or have suggestion
 
 The best way to report a bug or suggest something is to post an issue on GitHub. Try to make it simple, but descriptive and add ALL the information needed to REPRODUCE the bug. **"Does not work" is not enough!** If you can not compile, please state your system, compiler version, etc! You can also contact me via email if you want to.
