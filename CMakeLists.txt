@@ -12,10 +12,10 @@ if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
 	#set up compiler flags for Clang
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14") #support C++14
 elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
-	#check for G++ 8.0+
+	#check for g++ 7.0+
 	execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE G++_VERSION)
-	if (G++_VERSION VERSION_LESS 8.0)
-			message(SEND_ERROR "You need at least g++ 8 to compile res2h!")
+	if (G++_VERSION VERSION_LESS 7.0)
+			message(SEND_ERROR "You need at least g++ 7 to compile res2h!")
 	endif()
 	#set up compiler flags for GCC
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14") #support C++14
