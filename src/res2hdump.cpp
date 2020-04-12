@@ -1,61 +1,32 @@
-#include <iostream>
+#include "checksum.h"
+#include "fshelpers.h"
+#include "res2hinterface.h"
+
 #include <fstream>
+#include <iostream>
 
 #if defined(__GNUC__) || defined(__clang__)
 #include <experimental/filesystem>
-namespace FS_NAMESPACE = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 #elif defined(_MSC_VER)
 #include <filesystem>
-namespace FS_NAMESPACE = std::tr2::sys;
+namespace stdfs = std::tr2::sys;
 #endif
 
-#include "res2hinterface.h"
-#include "checksum.h"
-
-
-bool beVerbose = false;
-bool useFullPaths = false;
-bool informationOnly = false;
-FS_NAMESPACE::path inFilePath;
-FS_NAMESPACE::path outFilePath;
-
+static bool beVerbose = false;
+static bool useFullPaths = false;
+static bool informationOnly = false;
+static stdfs::path inFilePath;
+static stdfs::path outFilePath;
 
 // -----------------------------------------------------------------------------
 
-bool makeCanonical(FS_NAMESPACE::path & result, const FS_NAMESPACE::path & path)
-{
-	// if we use canonical the file must exits, else we get an exception.
-	try
-	{
-		result = FS_NAMESPACE::canonical(path);
-	}
-	catch (...)
-	{
-		// an error occurred. this maybe because the file is not there yet. try without the file name
-		try
-		{
-			result = FS_NAMESPACE::canonical(FS_NAMESPACE::path(path).remove_filename());
-			// ok. this worked. add file name again
-			result /= path.filename();
-		}
-		catch (...)
-		{
-			// hmm. didn't work. tell the user. at least the path should be there...
-			std::cout << "The path \"" << FS_NAMESPACE::path(path).remove_filename().string() << "\" couldn't be found. Please create it." << std::endl;
-			return false;
-		}
-	}
-	return true;
-}
-
-// -----------------------------------------------------------------------------
-
-void printVersion()
+static void printVersion()
 {
 	std::cout << "res2hdump " << RES2H_VERSION_STRING << " - Dump data from a res2h archive file or embedded archive." << std::endl << std::endl;
 }
 
-void printUsage()
+static void printUsage()
 {
 	std::cout << std::endl;
 	std::cout << "Usage: res2hdump <archive> [<outdir>] [options]" << std::endl;
@@ -98,14 +69,16 @@ bool readArguments(int argc, const char * argv[])
 			// if no files/directories have been found yet this is probably a file/directory
 			if (inFilePath.empty())
 			{
-				if (!makeCanonical(inFilePath, FS_NAMESPACE::path(argument)))
+				inFilePath = makeCanonical(stdfs::path(argument));
+				if (inFilePath.empty())
 				{
 					return false;
 				}
 			}
 			else if (outFilePath.empty())
 			{
-				if (!makeCanonical(outFilePath, FS_NAMESPACE::path(argument)))
+				outFilePath = makeCanonical(stdfs::path(argument));
+				if (outFilePath.empty())
 				{
 					return false;
 				}
@@ -123,7 +96,7 @@ bool readArguments(int argc, const char * argv[])
 
 // -----------------------------------------------------------------------------
 
-bool dumpArchive(FS_NAMESPACE::path & destination, FS_NAMESPACE::path & archive, bool createPaths = true, bool dontExtract = false)
+bool dumpArchive(stdfs::path & destination, stdfs::path & archive, bool createPaths, bool dontExtract)
 {
 	try
 	{
@@ -162,19 +135,19 @@ bool dumpArchive(FS_NAMESPACE::path & destination, FS_NAMESPACE::path & archive,
 							{
 								// worked. now dump file data to disk. construct output path
 								std::string filePath = entry.filePath;
-								FS_NAMESPACE::path subPath = filePath.erase(0, 2);
-								FS_NAMESPACE::path outPath = destination / subPath;
+								stdfs::path subPath = filePath.erase(0, 2);
+								stdfs::path outPath = destination / subPath;
 								if (createPaths)
 								{
-									FS_NAMESPACE::path dirPath = destination;
+									stdfs::path dirPath = destination;
 									for (auto sdIt = subPath.begin(); sdIt->filename() != subPath.filename(); ++sdIt)
 									{
 										// build output path with subdirectory
 										dirPath /= *sdIt;
 										// check if if exists
-										if (!FS_NAMESPACE::exists(dirPath))
+										if (!stdfs::exists(dirPath))
 										{
-											FS_NAMESPACE::create_directory(dirPath);
+											stdfs::create_directory(dirPath);
 										}
 									}
 								}
@@ -203,23 +176,23 @@ bool dumpArchive(FS_NAMESPACE::path & destination, FS_NAMESPACE::path & archive,
 								std::cout << "Failed to get data for resource #" << i << " from archive!" << std::endl;
 							}
 						}
-						catch (Res2hException e)
+						catch (const Res2hException &e)
 						{
 							std::cout << "Error loading resource " << std::dec << i << " from archive - " << e.whatString() << std::endl;
 						}
 					} // if(!dontExtract)
 				}
-				catch (Res2hException e)
+				catch (const Res2hException &e)
 				{
 					std::cout << "Error reading resource #" << std::dec << i << " - " << e.whatString() << std::endl;
 				}
 			}
 			return true;
 		}
-		else
-		{
+		
+		
 			std::cout << "Failed to open archive " << archive << std::endl;
-		}
+		
 	}
 	catch (Res2hException e)
 	{
@@ -242,13 +215,13 @@ int main(int argc, const char * argv[])
 	}
 
 	// check if the input path exist
-	if (!FS_NAMESPACE::exists(inFilePath))
+	if (!stdfs::exists(inFilePath))
 	{
 		std::cout << "Error: Invalid input file \"" << inFilePath.string() << "\"!" << std::endl;
 		return -2;
 	}
 	// check if argument 1 is a file
-	if (FS_NAMESPACE::is_directory(inFilePath))
+	if (stdfs::is_directory(inFilePath))
 	{
 		std::cout << "Error: Input must be a file!" << std::endl;
 		return -2;
@@ -257,7 +230,7 @@ int main(int argc, const char * argv[])
 	if (!informationOnly)
 	{
 		// check if argument 2 is a directory
-		if (!FS_NAMESPACE::is_directory(outFilePath))
+		if (!stdfs::is_directory(outFilePath))
 		{
 			std::cout << "Error: Output must be a directory!" << std::endl;
 			return -2;

@@ -1,3 +1,4 @@
+# Build project using CMake
 name: Build
 
 on:

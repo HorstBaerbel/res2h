@@ -1,139 +1,59 @@
-#include <string>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <vector>
+#include "checksum.h"
+#include "fshelpers.h"
+#include "res2h.h"
+
 #include <algorithm>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <string>
+#include <vector>
 
 #if defined(__GNUC__) || defined(__clang__)
 #include <experimental/filesystem>
-namespace FS_NAMESPACE = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 #elif defined(_MSC_VER)
 #include <filesystem>
-namespace FS_NAMESPACE = std::tr2::sys;
+namespace stdfs = std::tr2::sys;
 #endif
-
-#include "res2h.h"
-#include "checksum.h"
-
 
 struct FileData
 {
-	FS_NAMESPACE::path inPath;
-	FS_NAMESPACE::path outPath;
+	stdfs::path inPath;
+	stdfs::path outPath;
 	std::string internalName;
 	std::string dataVariableName;
 	std::string sizeVariableName;
-	uint64_t size;
+	uint64_t size{};
 };
 
-bool beVerbose = false;
-bool useRecursion = false;
-bool useC = false;
-bool createBinary = false;
-bool appendFile = false;
-bool combineResults = false;
-FS_NAMESPACE::path commonHeaderFilePath;
-FS_NAMESPACE::path utilitiesFilePath;
-FS_NAMESPACE::path inFilePath;
-FS_NAMESPACE::path outFilePath;
-
-std::ofstream badOfStream; // we need this later as a default parameter...
-
-// -----------------------------------------------------------------------------
-
-// This is based on the example code found here: https:// svn.boost.org/trac/boost/ticket/1976
-// but changed to not return a trailing ".." when paths only differ in their file name.
-// The function still seems to be missing in boost as of 1.54.0.
-FS_NAMESPACE::path naiveUncomplete(FS_NAMESPACE::path const path, FS_NAMESPACE::path const base)
-{
-	if (path.has_root_path())
-	{
-		if (path.root_path() != base.root_path())
-		{
-			return path;
-		}
-		else
-		{
-			return naiveUncomplete(path.relative_path(), base.relative_path());
-		}
-	}
-	else
-	{
-		if (base.has_root_path())
-		{
-			return path;
-		}
-		else
-		{
-			auto path_it = path.begin();
-			auto base_it = base.begin();
-			while (path_it != path.end() && base_it != base.end())
-			{
-				if (*path_it != *base_it) break;
-				++path_it; ++base_it;
-			}
-			FS_NAMESPACE::path result;
-			// check if we're at the filename of the base path already
-			if (*base_it != base.filename())
-			{
-				// add trailing ".." from path to base, but only if we're not already at the filename of the base path
-				for (; base_it != base.end() && *base_it != base.filename(); ++base_it)
-				{
-					result /= "..";
-				}
-			}
-			for (; path_it != path.end(); ++path_it)
-			{
-				result /= *path_it;
-			}
-			return result;
-		}
-	}
-	return path;
-}
-
-bool makeCanonical(FS_NAMESPACE::path & result, const FS_NAMESPACE::path & path)
-{
-	// if we use canonical the file must exits, else we get an exception.
-	try
-	{
-		result = FS_NAMESPACE::canonical(path);
-	}
-	catch (...)
-	{
-		// an error occurred. this maybe because the file is not there yet. try without the file name
-		try
-		{
-			result = FS_NAMESPACE::canonical(FS_NAMESPACE::path(path).remove_filename());
-			// ok. this worked. add file name again
-			result /= path.filename();
-		}
-		catch (...)
-		{
-			// hmm. didn't work. tell the user. at least the path should be there...
-			std::cout << "The path \"" << FS_NAMESPACE::path(path).remove_filename().string() << "\" couldn't be found. Please create it." << std::endl;
-			return false;
-		}
-	}
-	return true;
-}
+static bool beVerbose = false;
+static bool useRecursion = false;
+static bool useC = false;
+static bool createBinary = false;
+static bool appendFile = false;
+static bool combineResults = false;
+static stdfs::path commonHeaderFilePath;
+static stdfs::path utilitiesFilePath;
+static stdfs::path inFilePath;
+static stdfs::path outFilePath;
+static std::ofstream badOfStream; // we need this later as a default parameter...
 
 // -----------------------------------------------------------------------------
 
-void printVersion()
+static void printVersion()
 {
 	std::cout << "res2h " << RES2H_VERSION_STRING << " - Load plain binary data and dump to a raw C/C++ array." << std::endl << std::endl;
 }
 
-void printUsage()
+static void printUsage()
 {
 	std::cout << std::endl;
 	std::cout << "Usage: res2h <infile/indir> <outfile/outdir> [options]" << std::endl;
 	std::cout << "Valid options:" << std::endl;
-	std::cout << "-s Recurse into subdirectories below indir." << std::endl;
+	std::cout << "-r Recurse into subdirectories below indir." << std::endl;
 	std::cout << "-c Use .c files and arrays for storing the data definitions, else" << std::endl << "    uses .cpp files and std::vector/std::map." << std::endl;
-	std::cout << "-h <headerfile> Puts all declarations in a common \"headerfile\" using \"extern\"" << std::endl << "    and includes that header file in the source files." << std::endl;
+	std::cout << R"(-h <headerfile> Puts all declarations in a common "headerfile" using "extern")" << std::endl << "    and includes that header file in the source files." << std::endl;
 	std::cout << "-u <sourcefile> Create utility functions and arrays in a .c/.cpp file." << std::endl << "    Only makes sense in combination with -h" << std::endl;
 	std::cout << "-1 Combine all converted files into one big .c/.cpp file (use with -u)." << std::endl;
 	std::cout << "-b Compile binary archive outfile containing all infile(s). For reading in your" << std::endl << "    software include res2hinterface.h/.c/.cpp (depending on -c) and consult the docs." << std::endl;
@@ -161,7 +81,7 @@ bool readArguments(int argc, const char * argv[])
 				std::cout << "Error: Option -a can not be combined with -h or -u!" << std::endl;
 				return false;
 			}
-			else if (createBinary)
+			if (createBinary)
 			{
 				std::cout << "Error: Option -a can not be combined with -b!" << std::endl;
 				return false;
@@ -202,7 +122,7 @@ bool readArguments(int argc, const char * argv[])
 				std::cout << "Error: Option -b can not be combined with -h or -u!" << std::endl;
 				return false;
 			}
-			else if (appendFile)
+			if (appendFile)
 			{
 				std::cout << "Error: Option -b can not be combined with -a!" << std::endl;
 				return false;
@@ -220,7 +140,7 @@ bool readArguments(int argc, const char * argv[])
 			useC = true;
 			pastFiles = true;
 		}
-		else if (argument == "-s")
+		else if (argument == "-r")
 		{
 			useRecursion = true;
 			pastFiles = true;
@@ -237,7 +157,7 @@ bool readArguments(int argc, const char * argv[])
 				std::cout << "Error: Option -h can not be combined with -b!" << std::endl;
 				return false;
 			}
-			else if (appendFile)
+			if (appendFile)
 			{
 				std::cout << "Error: Option -h can not be combined with -a!" << std::endl;
 				return false;
@@ -246,7 +166,8 @@ bool readArguments(int argc, const char * argv[])
 			i++;
 			if (i < argc && argv[i] != nullptr)
 			{
-				if (!makeCanonical(commonHeaderFilePath, FS_NAMESPACE::path(argv[i])))
+				commonHeaderFilePath = makeCanonical(stdfs::path(argv[i]));
+				if (commonHeaderFilePath.empty())
 				{
 					return false;
 				}
@@ -265,7 +186,7 @@ bool readArguments(int argc, const char * argv[])
 				std::cout << "Error: Option -u can not be combined with -b!" << std::endl;
 				return false;
 			}
-			else if (appendFile)
+			if (appendFile)
 			{
 				std::cout << "Error: Option -u can not be combined with -a!" << std::endl;
 				return false;
@@ -274,7 +195,8 @@ bool readArguments(int argc, const char * argv[])
 			i++;
 			if (i < argc && argv[i] != nullptr)
 			{
-				if (!makeCanonical(utilitiesFilePath, FS_NAMESPACE::path(argv[i])))
+				utilitiesFilePath = makeCanonical(stdfs::path(argv[i]));
+				if (utilitiesFilePath.empty())
 				{
 					return false;
 				}
@@ -296,14 +218,16 @@ bool readArguments(int argc, const char * argv[])
 			// if no files/directories have been found yet this is probably a file/directory
 			if (inFilePath.empty())
 			{
-				if (!makeCanonical(inFilePath, FS_NAMESPACE::path(argument)))
+				inFilePath = makeCanonical(stdfs::path(argument));
+				if (inFilePath.empty())
 				{
 					return false;
 				}
 			}
 			else if (outFilePath.empty())
 			{
-				if (!makeCanonical(outFilePath, FS_NAMESPACE::path(argument)))
+				outFilePath = makeCanonical(stdfs::path(argument));
+				if (outFilePath.empty())
 				{
 					return false;
 				}
@@ -321,26 +245,26 @@ bool readArguments(int argc, const char * argv[])
 
 // -----------------------------------------------------------------------------
 
-std::vector<FileData> getFileDataFrom(const FS_NAMESPACE::path & inPath, const FS_NAMESPACE::path & outPath, const FS_NAMESPACE::path & parentDir, const bool recurse)
+std::vector<FileData> getFileDataFrom(const stdfs::path & inPath, const stdfs::path & outPath, const stdfs::path & parentDir, const bool recurse)
 {
 	// get all files from directory
 	std::vector<FileData> files;
 	// check for infinite symlinks
-	if (FS_NAMESPACE::is_symlink(inPath))
+	if (stdfs::is_symlink(inPath))
 	{
 		// check if the symlink points somewhere in the path. this would recurse
-		if (inPath.string().find(FS_NAMESPACE::canonical(inPath).string()) == 0)
+		if (hasPrefix(stdfs::canonical(inPath), inPath))
 		{
 			std::cout << "Warning: Path " << inPath << " contains recursive symlink! Skipping." << std::endl;
 			return files;
 		}
 	}
 	// iterate through source directory searching for files
-	const FS_NAMESPACE::directory_iterator dirEnd;
-	for (FS_NAMESPACE::directory_iterator fileIt(inPath); fileIt != dirEnd; ++fileIt)
+	const stdfs::directory_iterator dirEnd;
+	for (stdfs::directory_iterator fileIt(inPath); fileIt != dirEnd; ++fileIt)
 	{
-		FS_NAMESPACE::path filePath = (*fileIt).path();
-		if (!FS_NAMESPACE::is_directory(filePath))
+		stdfs::path filePath = (*fileIt).path();
+		if (!stdfs::is_directory(filePath))
 		{
 			if (beVerbose)
 			{
@@ -361,7 +285,7 @@ std::vector<FileData> getFileDataFrom(const FS_NAMESPACE::path & inPath, const F
 				newFileName.append(".cpp");
 			}
 			// remove parent directory of file from path for internal name. This could surely be done in a safer way
-			FS_NAMESPACE::path subPath(filePath.generic_string().substr(parentDir.generic_string().size() + 1));
+			stdfs::path subPath(filePath.generic_string().substr(parentDir.generic_string().size() + 1));
 			// add a ":/" before the name to mark internal resources (Yes. Hello Qt!)
 			temp.internalName = ":/" + subPath.generic_string();
 			// add subdir below parent path to name to enable multiple files with the same name
@@ -383,7 +307,7 @@ std::vector<FileData> getFileDataFrom(const FS_NAMESPACE::path & inPath, const F
 			// get file size
 			try
 			{
-				temp.size = static_cast<uint64_t>(FS_NAMESPACE::file_size(filePath));
+				temp.size = static_cast<uint64_t>(stdfs::file_size(filePath));
 				if (beVerbose)
 				{
 					std::cout << "Size is " << temp.size << " bytes." << std::endl;
@@ -402,10 +326,10 @@ std::vector<FileData> getFileDataFrom(const FS_NAMESPACE::path & inPath, const F
 	if (recurse)
 	{
 		// iterate through source directory again searching for directories
-		for (FS_NAMESPACE::directory_iterator dirIt(inPath); dirIt != dirEnd; ++dirIt)
+		for (stdfs::directory_iterator dirIt(inPath); dirIt != dirEnd; ++dirIt)
 		{
-			FS_NAMESPACE::path dirPath = (*dirIt).path();
-			if (FS_NAMESPACE::is_directory(dirPath))
+			stdfs::path dirPath = (*dirIt).path();
+			if (stdfs::is_directory(dirPath))
 			{
 				if (beVerbose)
 				{
@@ -422,9 +346,9 @@ std::vector<FileData> getFileDataFrom(const FS_NAMESPACE::path & inPath, const F
 	return files;
 }
 
-bool convertFile(FileData & fileData, const FS_NAMESPACE::path & commonHeaderPath, std::ofstream & outStream = badOfStream, bool addHeader = true)
+bool convertFile(FileData & fileData, const stdfs::path & commonHeaderPath, std::ofstream & outStream = badOfStream, bool addHeader = true)
 {
-	if (FS_NAMESPACE::exists(fileData.inPath))
+	if (stdfs::exists(fileData.inPath))
 	{
 		// try to open the input file
 		std::ifstream inStream;
@@ -467,7 +391,7 @@ bool convertFile(FileData & fileData, const FS_NAMESPACE::path & commonHeaderPat
 					if (!commonHeaderPath.empty())
 					{
 						// common header path must be relative to destination directory
-						FS_NAMESPACE::path relativeHeaderPath = naiveUncomplete(commonHeaderPath, fileData.outPath);
+						stdfs::path relativeHeaderPath = naiveUncomplete(commonHeaderPath, fileData.outPath);
 						outStream << "#include \"" << relativeHeaderPath.generic_string() << "\"" << std::endl << std::endl;
 					}
 				}
@@ -496,7 +420,7 @@ bool convertFile(FileData & fileData, const FS_NAMESPACE::path & commonHeaderPat
 				{
 					// read byte from source
 					unsigned char dataByte;
-					inStream.read((char *)&dataByte, 1);
+					inStream.read(reinterpret_cast<char *>(&dataByte), 1);
 					// check if we have actually read something
 					if (inStream.gcount() != 1 || inStream.eof())
 					{
@@ -505,7 +429,7 @@ bool convertFile(FileData & fileData, const FS_NAMESPACE::path & commonHeaderPat
 					}
 					// write to destination in hex with a width of 2 and '0' as padding
 					// we do not use showbase as it doesn't work with zero values
-					outStream << "0x" << std::setw(2) << std::setfill('0') << std::hex << (unsigned int)dataByte;
+					outStream << "0x" << std::setw(2) << std::setfill('0') << std::hex << static_cast<unsigned int>(dataByte);
 					// was this the last character?
 					if (!inStream.eof() && fileData.size > static_cast<uint64_t>(inStream.tellg()))
 					{
@@ -532,11 +456,11 @@ bool convertFile(FileData & fileData, const FS_NAMESPACE::path & commonHeaderPat
 				}
 				return true;
 			}
-			else
-			{
+			
+			
 				std::cout << "Error: Failed to open file \"" << fileData.outPath.string() << "\" for writing!" << std::endl;
 				return false;
-			}
+			
 		}
 		else
 		{
@@ -551,7 +475,7 @@ bool convertFile(FileData & fileData, const FS_NAMESPACE::path & commonHeaderPat
 	return false;
 }
 
-bool createCommonHeader(const std::vector<FileData> & fileList, const FS_NAMESPACE::path & commonHeaderPath, bool addUtilityFunctions = false, bool useCConstructs = false)
+bool createCommonHeader(const std::vector<FileData> & fileList, const stdfs::path & commonHeaderPath, bool addUtilityFunctions, bool useCConstructs)
 {
 	// try opening the output file. truncate it when it exists
 	std::ofstream outStream;
@@ -578,15 +502,15 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const FS_NAMESPA
 		}
 		// add all files and check maximum size
 		uint64_t maxSize = 0;
-		for (auto fdIt = fileList.cbegin(); fdIt != fileList.cend(); ++fdIt)
+		for (const auto & fdIt : fileList)
 		{
 			// add size and data variable
-			maxSize = maxSize < fdIt->size ? fdIt->size : maxSize;
-			if (fdIt->size <= UINT16_MAX)
+			maxSize = maxSize < fdIt.size ? fdIt.size : maxSize;
+			if (fdIt.size <= UINT16_MAX)
 			{
 				outStream << "extern const uint16_t ";
 			}
-			else if (fdIt->size <= UINT32_MAX)
+			else if (fdIt.size <= UINT32_MAX)
 			{
 				outStream << "extern const uint32_t ";
 			}
@@ -594,8 +518,8 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const FS_NAMESPA
 			{
 				outStream << "extern const uint64_t ";
 			}
-			outStream << fdIt->sizeVariableName << ";" << std::endl;
-			outStream << "extern const uint8_t " << fdIt->dataVariableName << "[];" << std::endl << std::endl;
+			outStream << fdIt.sizeVariableName << ";" << std::endl;
+			outStream << "extern const uint8_t " << fdIt.dataVariableName << "[];" << std::endl << std::endl;
 		}
 		// if we want utilities, add array
 		if (addUtilityFunctions)
@@ -643,14 +567,14 @@ bool createCommonHeader(const std::vector<FileData> & fileList, const FS_NAMESPA
 		}
 		return true;
 	}
-	else
-	{
+	
+	
 		std::cout << "Error: Failed to open file \"" << commonHeaderPath << "\" for writing!" << std::endl;
-	}
+	
 	return true;
 }
 
-bool createUtilities(std::vector<FileData> & fileList, const FS_NAMESPACE::path & utilitiesPath, const FS_NAMESPACE::path & commonHeaderPath, bool useCConstructs = false, bool addFileData = false)
+bool createUtilities(std::vector<FileData> & fileList, const stdfs::path & utilitiesPath, const stdfs::path & commonHeaderPath, bool useCConstructs, bool addFileData)
 {
 	// try opening the output file. truncate it when it exists
 	std::ofstream outStream;
@@ -664,7 +588,7 @@ bool createUtilities(std::vector<FileData> & fileList, const FS_NAMESPACE::path 
 		// add message
 		outStream << "// this file was auto-generated by res2h" << std::endl << std::endl;
 		// create path to include file RELATIVE to this file
-		FS_NAMESPACE::path relativePath = naiveUncomplete(commonHeaderPath, utilitiesPath);
+		stdfs::path relativePath = naiveUncomplete(commonHeaderPath, utilitiesPath);
 		// include header file
 		outStream << "#include \"" << relativePath.string() << "\"" << std::endl << std::endl;
 		// if the data should go to this file too, add it
@@ -729,10 +653,10 @@ bool createUtilities(std::vector<FileData> & fileList, const FS_NAMESPACE::path 
 		}
 		return true;
 	}
-	else
-	{
+	
+	
 		std::cout << "Error: Failed to open file \"" << utilitiesPath << "\" for writing!" << std::endl;
-	}
+	
 	return true;
 }
 
@@ -756,14 +680,14 @@ bool createUtilities(std::vector<FileData> & fileList, const FS_NAMESPACE::path 
 // END - 04/08       | uint32_t / uint64_t | Fletcher32/64 checksum of whole file up to this point
 // Obviously with a 32bit archive you're limited to ~4GB for the whole binary file and ~4GB per data entry.
 // Res2h will automagically create a 32bit archive, if data permits it, or a 64bit archive if needed.
-bool createBlob(const std::vector<FileData> & fileList, const FS_NAMESPACE::path & filePath)
+bool createBlob(const std::vector<FileData> & fileList, const stdfs::path & filePath)
 {
 	// try opening the output file. truncate it when it exists
 	std::fstream outStream;
 	outStream.open(filePath.string(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 	if (outStream.is_open() && outStream.good())
 	{
-		const uint32_t nrOfEntries = static_cast<uint32_t>(fileList.size());
+		const auto nrOfEntries = static_cast<uint32_t>(fileList.size());
 		// check if a 64bit archive is needed, or 32bit suffice
 		uint64_t directorySize = 0;
 		uint64_t maxDataSize = 0;
@@ -808,7 +732,7 @@ bool createBlob(const std::vector<FileData> & fileList, const FS_NAMESPACE::path
 				outStream.close();
 				return false;
 			}
-			const uint16_t nameSize = static_cast<uint16_t>(file.internalName.size());
+			const auto nameSize = static_cast<uint16_t>(file.internalName.size());
 			outStream.write(reinterpret_cast<const char *>(&nameSize), sizeof(uint16_t));
 			// add name
 			outStream.write(reinterpret_cast<const char *>(&file.internalName[0]), nameSize);
@@ -911,15 +835,15 @@ bool createBlob(const std::vector<FileData> & fileList, const FS_NAMESPACE::path
 		}
 		return true;
 	}
-	else
-	{
+	
+	
 		std::cout << "Error: Failed to open file \"" << filePath.string() << "\" for writing!" << std::endl;
 		return false;
-	}
+	
 	return false;
 }
 
-bool appendAtoB(const FS_NAMESPACE::path & destinationPath, const FS_NAMESPACE::path & sourcePath)
+bool appendAtoB(const stdfs::path & destinationPath, const stdfs::path & sourcePath)
 {
 	// try opening the output file.
 	std::fstream outStream;
@@ -970,10 +894,10 @@ bool appendAtoB(const FS_NAMESPACE::path & destinationPath, const FS_NAMESPACE::
 		outStream.close();
 		return true;
 	}
-	else
-	{
+	
+	
 		std::cout << "Error: Failed to open output file \"" << destinationPath.string() << "\" for writing!" << std::endl;
-	}
+	
 	return false;
 }
 
@@ -989,7 +913,7 @@ int main(int argc, const char * argv[])
 		return -1;
 	}
 	// check if the input path exist
-	if (!FS_NAMESPACE::exists(inFilePath))
+	if (!stdfs::exists(inFilePath))
 	{
 		std::cout << "Error: Invalid input file/directory \"" << inFilePath.string() << "\"!" << std::endl;
 		return -2;
@@ -997,7 +921,7 @@ int main(int argc, const char * argv[])
 	if (createBinary)
 	{
 		// check if argument 2 is a file
-		if (FS_NAMESPACE::is_directory(outFilePath))
+		if (stdfs::is_directory(outFilePath))
 		{
 			std::cout << "Error: Output must be a file if -b is used!" << std::endl;
 			return -2;
@@ -1006,16 +930,16 @@ int main(int argc, const char * argv[])
 	else if (appendFile)
 	{
 		// check if argument 2 is a file
-		if (FS_NAMESPACE::is_directory(outFilePath))
+		if (stdfs::is_directory(outFilePath))
 		{
 			std::cout << "Error: Output must be a file if -a is used!" << std::endl;
 			return -2;
 		}
 	}
-	else if (FS_NAMESPACE::is_directory(inFilePath) != FS_NAMESPACE::is_directory(outFilePath))
+	else if (stdfs::is_directory(inFilePath) != stdfs::is_directory(outFilePath))
 	{
 		// check if output directory exists
-		if (FS_NAMESPACE::is_directory(outFilePath) && !FS_NAMESPACE::exists(outFilePath))
+		if (stdfs::is_directory(outFilePath) && !stdfs::exists(outFilePath))
 		{
 			std::cout << "Error: Invalid output directory \"" << outFilePath.string() << "\"!" << std::endl;
 			return -2;
@@ -1037,7 +961,7 @@ int main(int argc, const char * argv[])
 	{
 		// build list of files to process
 		std::vector<FileData> fileList;
-		if (FS_NAMESPACE::is_directory(inFilePath) && FS_NAMESPACE::is_directory(inFilePath))
+		if (stdfs::is_directory(inFilePath) && stdfs::is_directory(inFilePath))
 		{
 			// both files are directories, build file ist
 			fileList = getFileDataFrom(inFilePath, outFilePath, inFilePath, useRecursion);
@@ -1063,7 +987,7 @@ int main(int argc, const char * argv[])
 			// get file size
 			try
 			{
-				temp.size = static_cast<uint64_t>(FS_NAMESPACE::file_size(inFilePath));
+				temp.size = static_cast<uint64_t>(stdfs::file_size(inFilePath));
 				if (beVerbose)
 				{
 					std::cout << "Size is " << temp.size << " bytes." << std::endl;

@@ -1,14 +1,14 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
-#include <memory>
-#include <vector>
 #include <exception>
 #include <fstream>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include "res2h.h"
 #include "checksum.h"
+#include "res2h.h"
 
 /*
 Exceptions thrown by Res2h when something goes wrong.
@@ -20,11 +20,11 @@ class Res2hException : public std::exception
 	Res2hException();
 
 public:
-	Res2hException(const char * errorString) throw();
-	Res2hException(const std::string & errorString) throw();
+	explicit Res2hException(const char * errorString) noexcept;
+	explicit Res2hException(std::string  errorString) noexcept;
 
-	virtual const char* what() const throw();
-	virtual const std::string & whatString() const throw();
+	const char* what() const noexcept override;
+	virtual const std::string & whatString() const noexcept;
 };
 
 // -----------------------------------------------------------------------------
@@ -119,7 +119,7 @@ private:
 	// !<Load a resource from disk.
 	ResourceInfo loadResourceFromDisk(const std::string & filePath);
 	// !<Load a resource from a binary archive.
-	ResourceInfo loadResourceFromArchive(const ResourceInfo & entry, const ArchiveInfo & archive, bool checkChecksum = true);
+	ResourceInfo loadResourceFromArchive(const ResourceInfo & entry, const ArchiveInfo & archive, bool checkChecksum);
 
 	// !<Cache holding the archive entries.
 	std::vector<ArchiveInfo> m_archives;
@@ -188,11 +188,11 @@ bool Res2h<T>::loadArchive(const std::string & archivePath)
 			m_archives.push_back(info);
 			return true;
 		}
-		else
-		{
+		
+		
 			inStream.close();
 			throw Res2hException(std::string("Archive \"") + archivePath + "\" contains no files!");
-		}
+		
 	}
 	else
 	{
@@ -221,8 +221,8 @@ typename Res2h<T>::ResourceInfo Res2h<T>::loadResource(const std::string & fileP
 					{
 						return resource;
 					}
-					else
-					{
+					
+					
 						// no. load data first
 						auto tempEntry = loadResourceFromArchive(resource, archive, checkChecksum);
 						if (keepInCache)
@@ -230,7 +230,7 @@ typename Res2h<T>::ResourceInfo Res2h<T>::loadResource(const std::string & fileP
 							resource = tempEntry;
 						}
 						return tempEntry;
-					}
+					
 				}
 			}
 		}
@@ -247,8 +247,8 @@ typename Res2h<T>::ResourceInfo Res2h<T>::loadResource(const std::string & fileP
 				{
 					return resource;
 				}
-				else
-				{
+				
+				
 					// no. load data first
 					auto tempEntry = loadResourceFromDisk(filePath);
 					if (keepInCache)
@@ -256,7 +256,7 @@ typename Res2h<T>::ResourceInfo Res2h<T>::loadResource(const std::string & fileP
 						resource = tempEntry;
 					}
 					return tempEntry;
-				}
+				
 			}
 		}
 	}
@@ -285,7 +285,7 @@ typename Res2h<T>::ResourceInfo Res2h<T>::loadResourceFromDisk(const std::string
 		if (fileSize > 0)
 		{
 			// allocate data
-			std::shared_ptr<unsigned char> fileData = std::shared_ptr<unsigned char>(new unsigned char[fileSize], [](unsigned char *p) { delete[] p; });
+			std::shared_ptr<unsigned char> fileData = std::shared_ptr<unsigned char>(new unsigned char[fileSize], [](const unsigned char *p) { delete[] p; });
 			// try reading data
 			try
 			{
@@ -322,7 +322,7 @@ typename Res2h<T>::ResourceInfo Res2h<T>::loadResourceFromArchive(const Resource
 		// opened ok. move to data offset
 		inStream.seekg(archive.offsetInFile + temp.dataOffset);
 		// allocate data
-		temp.data = std::shared_ptr<unsigned char>(new unsigned char[temp.dataSize], [](unsigned char *p) { delete[] p; });
+		temp.data = std::shared_ptr<unsigned char>(new unsigned char[temp.dataSize], [](const unsigned char *p) { delete[] p; });
 		// try reading data
 		try
 		{

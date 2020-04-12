@@ -1,6 +1,7 @@
 #include "res2hinterface.h"
 
 #include <climits>
+#include <utility>
 
 template<>
 Res2h<uint32_t> & Res2h<uint32_t>::instance()
@@ -42,8 +43,8 @@ T Res2h<T>::findArchiveStartOffset(const std::string & archivePath) const
 			inStream.close();
 			return 0;
 		}
-		else
-		{
+		
+		
 			// no magic bytes at start. might be an embedded archive, search for a header backwards from EOF...
 			unsigned char buffer[4096] = {0};
 			// seek to end minus buffer size
@@ -71,7 +72,7 @@ T Res2h<T>::findArchiveStartOffset(const std::string & archivePath) const
 				// but read some bytes again, else we could miss the header in between buffer 
 				inStream.seekg(-static_cast<int64_t>(sizeof(buffer) - sizeof(RES2H_MAGIC_BYTES) + 1), std::ios::cur);
 			}
-		}
+		
 		// close file. nothing found.
 		inStream.close();
 	}
@@ -141,7 +142,7 @@ Res2h<uint32_t>::ArchiveInfo Res2h<uint32_t>::getArchiveInfo(const std::string &
 			}
 			return info;
 		}
-		else if (info.bits == 64)
+		if (info.bits == 64)
 		{
 			inStream.close();
 			throw Res2hException(std::string("Can not read 64 bit archive \"") + archivePath + "\". Only 32 bit archives can be read");
@@ -220,10 +221,10 @@ Res2h<uint64_t>::ArchiveInfo Res2h<uint64_t>::getArchiveInfo(const std::string &
 		}
 		return info;
 	}
-	else
-	{
+	
+	
 		throw Res2hException(std::string("Failed to open archive \"") + archivePath + "\" for reading.");
-	}
+	
 }
 
 template<typename T>
@@ -242,22 +243,22 @@ void Res2h<T>::releaseCache()
 
 // -----------------------------------------------------------------------------
 
-Res2hException::Res2hException(const char * errorString) throw()
-	: exception(), error(errorString)
+Res2hException::Res2hException(const char * errorString) noexcept
+	:  error(errorString)
 {
 }
 
-Res2hException::Res2hException(const std::string & errorString) throw()
-	: exception(), error(errorString)
+Res2hException::Res2hException(std::string  errorString) noexcept
+	:  error(std::move(errorString))
 {
 }
 
-const char * Res2hException::what() const throw()
+const char * Res2hException::what() const noexcept
 {
 	return error.c_str();
 }
 
-const std::string & Res2hException::whatString() const throw()
+const std::string & Res2hException::whatString() const noexcept
 {
 	return error;
 }

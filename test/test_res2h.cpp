@@ -1,8 +1,8 @@
-#include <string>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <iomanip>
-#include <fstream>
+#include <string>
 #include <vector>
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -13,10 +13,10 @@
 	namespace FS_NAMESPACE = std::tr2::sys;
 #endif
 
-#include <stdlib.h> // for system()
+#include <cstdlib> // for system()
 
-#include "res2h.h"
 #include "checksum.h"
+#include "res2h.h"
 
 
 struct FileData
@@ -26,7 +26,7 @@ struct FileData
 	std::string internalName;
 	std::string dataVariableName;
 	std::string sizeVariableName;
-	size_t size;
+	size_t size{};
 };
 
 #ifdef WIN32
@@ -97,7 +97,7 @@ std::vector<FileData> getFileDataFrom(const FS_NAMESPACE::path & inPath, const F
 			// get file size
 			try
 			{
-				temp.size = (size_t)FS_NAMESPACE::file_size(filePath);
+				temp.size = static_cast<size_t>(FS_NAMESPACE::file_size(filePath));
 			}
 			catch (...)
 			{
@@ -200,14 +200,14 @@ bool compareAtoB(const FS_NAMESPACE::path & a, const FS_NAMESPACE::path & b)
 		bStream.close();
 		return true;
 	}
-	else
-	{
+	
+	
 		std::cout << "Error: Failed to open file " << a << " for reading!" << std::endl;
-	}
+	
 	return false;
 }
 
-int main(int argc, const char * argv[])
+int main(int  /*argc*/, const char *  /*argv*/[])
 {
 	printHeader();
 
