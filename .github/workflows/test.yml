@@ -13,9 +13,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: cmake
-      run: cmake --build build --config Release
+    - name: Run cmake
+      run: |
+        mkdir build
+        cd build
+        cmake --config Release ..
     - name: Build and run tests
       run: |
-        cd build
+        make
         make test
