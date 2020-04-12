@@ -69,7 +69,7 @@ bool readArguments(int argc, const char * argv[])
 			// if no files/directories have been found yet this is probably a file/directory
 			if (inFilePath.empty())
 			{
-				inFilePath = normalize(stdfs::path(argument));
+				inFilePath = naiveLexicallyNormal(stdfs::path(argument));
 				if (inFilePath.empty())
 				{
 					return false;
@@ -77,7 +77,7 @@ bool readArguments(int argc, const char * argv[])
 			}
 			else if (outFilePath.empty())
 			{
-				outFilePath = normalize(stdfs::path(argument));
+				outFilePath = naiveLexicallyNormal(stdfs::path(argument));
 				if (outFilePath.empty())
 				{
 					return false;

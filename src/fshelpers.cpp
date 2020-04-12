@@ -1,7 +1,7 @@
 #include "fshelpers.h"
 
 // This is based on the example code found here: https://svn.boost.org/trac/boost/ticket/1976
-stdfs::path naiveUncomplete(const stdfs::path &path, const stdfs::path &base)
+stdfs::path naiveRelative(const stdfs::path &path, const stdfs::path &base)
 {
     if (path.has_root_path())
     {
@@ -10,7 +10,7 @@ stdfs::path naiveUncomplete(const stdfs::path &path, const stdfs::path &base)
         {
             return path;
         }
-        return naiveUncomplete(path.relative_path(), base.relative_path());
+        return naiveRelative(path.relative_path(), base.relative_path());
     }
     else
     {
@@ -53,7 +53,7 @@ stdfs::path naiveUncomplete(const stdfs::path &path, const stdfs::path &base)
     }
 }
 
-stdfs::path normalize(const stdfs::path &path, const stdfs::path &base)
+stdfs::path naiveLexicallyNormal(const stdfs::path &path, const stdfs::path &base)
 {
     stdfs::path absPath = stdfs::absolute(path, base);
     stdfs::path result;
