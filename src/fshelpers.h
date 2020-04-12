@@ -8,16 +8,17 @@ namespace stdfs = std::experimental::filesystem;
 namespace stdfs = std::tr2::sys;
 #endif
 
-/// @brief Uncomplete a path, e.g. NaiveUncomplete("/foo/new", "/foo/bar") returns "../new".
+/// @brief Uncomplete a path, e.g. naiveUncomplete("/foo/new", "/foo/bar") returns "../new".
 /// Does not return a trailing ".." when paths only differ in their file name.
 stdfs::path naiveUncomplete(const stdfs::path &path, const stdfs::path &base);
 
-/// @brief Make path canonical, but does not throw an exception,
-/// if the file part of  do not exist.
-/// Sort of replaces weak_canonical: https://en.cppreference.com/w/cpp/filesystem/canonical
-/// as that does not seem to be available yet.
-/// @throw Throws stdfs::filesystem_error if part of the path does not exits.
-stdfs::path makeCanonical(const stdfs::path &path);
+/// @brief Normalize path, similar to lexically_normal (https://en.cppreference.com/w/cpp/filesystem/path/lexically_normal).
+/// so no . / .. or symlinks are are in the path anymore.
+/// Does not check if the path exists.
+stdfs::path normalize(const stdfs::path &path, const stdfs::path &base = stdfs::current_path());
 
 /// @brief Returns true if path starts with prefix.
-bool hasPrefix(const stdfs::path &path, const stdfs::path &prefix);
+bool startsWithPrefix(const stdfs::path &path, const stdfs::path &prefix);
+
+/// @brief Returns true if path has an recursive symlink.
+bool hasRecursiveSymlink(const stdfs::path &path);

@@ -166,7 +166,7 @@ bool readArguments(int argc, const char * argv[])
 			i++;
 			if (i < argc && argv[i] != nullptr)
 			{
-				commonHeaderFilePath = makeCanonical(stdfs::path(argv[i]));
+				commonHeaderFilePath = normalize(stdfs::path(argv[i]));
 				if (commonHeaderFilePath.empty())
 				{
 					return false;
@@ -195,7 +195,7 @@ bool readArguments(int argc, const char * argv[])
 			i++;
 			if (i < argc && argv[i] != nullptr)
 			{
-				utilitiesFilePath = makeCanonical(stdfs::path(argv[i]));
+				utilitiesFilePath = normalize(stdfs::path(argv[i]));
 				if (utilitiesFilePath.empty())
 				{
 					return false;
@@ -218,7 +218,7 @@ bool readArguments(int argc, const char * argv[])
 			// if no files/directories have been found yet this is probably a file/directory
 			if (inFilePath.empty())
 			{
-				inFilePath = makeCanonical(stdfs::path(argument));
+				inFilePath = normalize(stdfs::path(argument));
 				if (inFilePath.empty())
 				{
 					return false;
@@ -226,7 +226,7 @@ bool readArguments(int argc, const char * argv[])
 			}
 			else if (outFilePath.empty())
 			{
-				outFilePath = makeCanonical(stdfs::path(argument));
+				outFilePath = normalize(stdfs::path(argument));
 				if (outFilePath.empty())
 				{
 					return false;
@@ -250,14 +250,10 @@ std::vector<FileData> getFileDataFrom(const stdfs::path & inPath, const stdfs::p
 	// get all files from directory
 	std::vector<FileData> files;
 	// check for infinite symlinks
-	if (stdfs::is_symlink(inPath))
+	if (hasRecursiveSymlink(inPath))
 	{
-		// check if the symlink points somewhere in the path. this would recurse
-		if (hasPrefix(stdfs::canonical(inPath), inPath))
-		{
-			std::cout << "Warning: Path " << inPath << " contains recursive symlink! Skipping." << std::endl;
-			return files;
-		}
+		std::cout << "Warning: Path " << inPath << " contains recursive symlink! Skipping." << std::endl;
+		return files;
 	}
 	// iterate through source directory searching for files
 	const stdfs::directory_iterator dirEnd;

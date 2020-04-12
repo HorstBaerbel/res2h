@@ -1,10 +1,11 @@
 #include "fshelpers.h"
 
-// This is based on the example code found here: https:// svn.boost.org/trac/boost/ticket/1976
-stdfs::path naiveUncomplete(stdfs::path const &path, stdfs::path const &base)
+// This is based on the example code found here: https://svn.boost.org/trac/boost/ticket/1976
+stdfs::path naiveUncomplete(const stdfs::path &path, const stdfs::path &base)
 {
     if (path.has_root_path())
     {
+        // make sure the roots of both paths match, otherwise they're on different drives
         if (path.root_path() != base.root_path())
         {
             return path;
@@ -17,55 +18,98 @@ stdfs::path naiveUncomplete(stdfs::path const &path, stdfs::path const &base)
         {
             return path;
         }
-        auto path_it = path.begin();
-        auto base_it = base.begin();
-        while (path_it != path.end() && base_it != base.end())
+        // remove file name portion of base path
+        auto baseDir = base;
+        if (baseDir.has_filename())
         {
-            if (*path_it != *base_it)
+            baseDir = baseDir.parent_path();
+        }
+        // skip all directories both paths have in common
+        auto pathIt = path.begin();
+        auto baseIt = baseDir.begin();
+        while (pathIt != path.end() && baseIt != baseDir.end())
+        {
+            if (*pathIt != *baseIt)
             {
                 break;
             }
-            ++path_it;
-            ++base_it;
+            ++pathIt;
+            ++baseIt;
         }
         stdfs::path result;
-        // check if we're at the filename of the base path already
-        if (*base_it != base.filename())
+        // now if there's directories left over in base, we need to add .. for every level
+        while (baseIt != baseDir.end())
         {
-            // add trailing ".." from path to base, but only if we're not already at the filename of the base path
-            for (; base_it != base.end() && *base_it != base.filename(); ++base_it)
+            result /= "..";
+            ++baseIt;
+        }
+        // now if there's directories left over in path add them to the result
+        while (pathIt != path.end())
+        {
+            result /= *pathIt;
+             ++pathIt;
+        }
+        return result;
+    }
+}
+
+stdfs::path normalize(const stdfs::path &path, const stdfs::path &base)
+{
+    stdfs::path absPath = stdfs::absolute(path, base);
+    stdfs::path result;
+    for (stdfs::path::iterator pIt = absPath.begin(); pIt != absPath.end(); ++pIt)
+    {
+        if (*pIt == "..")
+        {
+            // /a/b/.. is not necessarily /a if b is a symbolic link
+            if (stdfs::is_symlink(result))
             {
-                result /= "..";
+                result /= *pIt;
+            }
+            // /a/b/../.. is not /a/b/.. under most circumstances
+            // We can end up with ..s in our result because of symbolic links
+            else if (result.filename() == "..")
+            {
+                result /= *pIt;
+            }
+            // Otherwise it should be safe to resolve the parent
+            else
+            {
+                result = result.parent_path();
             }
         }
-        for (; path_it != path.end(); ++path_it)
+        else if (*pIt == ".")
         {
-            result /= *path_it;
+            // Ignore .
         }
-        return result;
+        else
+        {
+            // Just cat other path entries
+            result /= *pIt;
+        }
     }
-    return path;
+    return result;
 }
 
-stdfs::path makeCanonical(const stdfs::path &path)
+bool startsWithPrefix(const stdfs::path &path, const stdfs::path &prefix)
 {
-    try
+    if (path.empty() || prefix.empty())
     {
-        return stdfs::canonical(path);
+        return false;
     }
-    catch (const stdfs::filesystem_error & /*e*/)
-    {
-        // an error occurred. this maybe because part of the path not there
-        // we only check the file name part here, for simplicity
-        stdfs::path result = stdfs::canonical(stdfs::path(path).remove_filename());
-        // ok. this worked. add file name again
-        result /= path.filename();
-        return result;
-    }
-}
-
-bool hasPrefix(const stdfs::path &path, const stdfs::path &prefix)
-{
     auto pair = std::mismatch(path.begin(), path.end(), prefix.begin(), prefix.end());
     return pair.second == prefix.end();
+}
+
+bool hasRecursiveSymlink(const stdfs::path &path)
+{
+	if (stdfs::is_symlink(path))
+	{
+		// check if the symlink points somewhere in the path. this would recurse
+		if (startsWithPrefix(stdfs::canonical(path), path))
+		{
+			return true;
+		}
+	}
+    return false;
 }

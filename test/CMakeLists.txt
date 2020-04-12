@@ -25,18 +25,19 @@ elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
 endif()
 
 # Add some compiler flags so we see warnings early on
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Wall" )
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Wextra" )
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Wconversion" )
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Wnon-virtual-dtor" )
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Wold-style-cast" )
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Woverloaded-virtual" )
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Wself-init" )
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Wunsafe-loop-optimization" )
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-pedantic" )
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wall")
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wextra")
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Weffc++")
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wconversion")
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wnon-virtual-dtor")
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wold-style-cast")
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Woverloaded-virtual")
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wself-init")
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wunsafe-loop-optimization")
+EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-pedantic")
 
 # Enable easier debugging for unit tests
-EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Og" )
+#EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-Og" )
 EnableIfCompilerSupports( CMAKE_CXX_FLAGS "-g" )
 
 #-------------------------------------------------------------------------------
