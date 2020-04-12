@@ -20,5 +20,6 @@ jobs:
         cmake --config Release ..
     - name: Build and run tests
       run: |
+        cd build
         make
         make test
