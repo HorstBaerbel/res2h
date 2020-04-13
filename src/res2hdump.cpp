@@ -42,7 +42,7 @@ static void printUsage()
 static bool readArguments(const std::vector<std::string> &arguments)
 {
     bool pastFiles = false;
-    for (const auto & argument : arguments)
+    for (const auto &argument : arguments)
     {
         // check what it is
         if (argument == "-f")

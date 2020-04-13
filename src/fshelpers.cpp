@@ -56,7 +56,7 @@ stdfs::path naiveLexicallyNormal(const stdfs::path &path, const stdfs::path &bas
 {
     stdfs::path result;
     stdfs::path absPath = stdfs::absolute(path, base);
-    for (const auto & part : absPath)
+    for (const auto &part : absPath)
     {
         if (part == "..")
         {

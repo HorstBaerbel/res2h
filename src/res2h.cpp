@@ -568,7 +568,7 @@ static bool createUtilities(std::vector<FileData> &fileList, const stdfs::path &
     // if the data should go to this file too, add it
     if (addFileData)
     {
-        for (auto & fd : fileList)
+        for (auto &fd : fileList)
         {
             if (!convertFile(fd, commonHeaderFilePath, outStream, false))
             {
@@ -695,7 +695,7 @@ static bool createBlob(const std::vector<FileData> &fileList, const stdfs::path 
         {
             fileChecksum = mustUse64Bit ? calculateFletcher<uint64_t>(file.inPath.string()) : calculateFletcher<uint32_t>(file.inPath.string());
         }
-        catch(const std::runtime_error& e)
+        catch (const std::runtime_error &e)
         {
             std::cerr << "Failed to calculate file checksum: " << e.what() << std::endl;
             return false;
@@ -735,7 +735,7 @@ static bool createBlob(const std::vector<FileData> &fileList, const stdfs::path 
                 // try reading data from input file
                 inStream.read(reinterpret_cast<char *>(buffer.data()), sizeof(buffer));
             }
-            catch (const std::ios_base::failure &/*e*/)
+            catch (const std::ios_base::failure & /*e*/)
             {
                 // if something other that EOF happended, this is a serious error
                 if (!inStream.eof())
@@ -770,7 +770,7 @@ static bool createBlob(const std::vector<FileData> &fileList, const stdfs::path 
     IF_BEVERBOSE(std::cout << "Archive has " << std::dec << archiveSize << " bytes." << std::endl)
     // calculate checksum of whole file and append to file
     uint64_t checksum = 0;
-    try 
+    try
     {
         checksum = mustUse64Bit ? calculateFletcher<uint64_t>(filePath.string()) : calculateFletcher<uint32_t>(filePath.string());
     }
