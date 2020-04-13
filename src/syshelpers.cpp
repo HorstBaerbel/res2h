@@ -1,8 +1,10 @@
 #include "syshelpers.h"
 
 #include <array>
+#include <iomanip>
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 bool systemCommand(const std::string &cmd)
 {
@@ -31,4 +33,12 @@ std::pair<bool, std::string> systemCommandStdout(const std::string &cmd)
         throw std::runtime_error("Failed to open pipe");
     }
     throw std::runtime_error("Command processor not available");
+}
+
+std::string currentDateAndTime()
+{
+    std::stringstream ss;
+    std::time_t t = std::time(nullptr);
+    ss << std::put_time(std::localtime(&t), "%F %T");
+    return ss.str();
 }

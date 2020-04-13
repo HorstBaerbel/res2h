@@ -39,13 +39,11 @@ static void printUsage()
     std::cout << "res2hdump ./resources/program.exe ./resources (extract files from embedded archive)" << std::endl;
 }
 
-bool readArguments(int argc, const char *argv[])
+static bool readArguments(const std::vector<std::string> &arguments)
 {
     bool pastFiles = false;
-    for (int i = 1; i < argc; ++i)
+    for (const auto & argument : arguments)
     {
-        // read argument from list
-        std::string argument = argv[i];
         // check what it is
         if (argument == "-f")
         {
@@ -95,7 +93,7 @@ bool readArguments(int argc, const char *argv[])
 
 // -----------------------------------------------------------------------------
 
-bool dumpArchive(stdfs::path &destination, stdfs::path &archive, bool createPaths, bool extract)
+static bool dumpArchive(const stdfs::path &destination, const stdfs::path &archive, bool createPaths, bool extract)
 {
     try
     {
@@ -157,7 +155,7 @@ bool dumpArchive(stdfs::path &destination, stdfs::path &archive, bool createPath
                                 continue;
                             }
                             // write data to disk and check if all data has been written
-                            outStream.write(reinterpret_cast<const char *>(file.data.data()), file.dataSize);
+                            outStream.write(reinterpret_cast<const char *>(file.data.data()), static_cast<std::streamsize>(file.dataSize));
                             if (static_cast<uint64_t>(outStream.tellp()) != file.dataSize)
                             {
                                 std::cerr << "Failed to write all data for resource #" << std::dec << i << std::endl;
@@ -186,8 +184,14 @@ bool dumpArchive(stdfs::path &destination, stdfs::path &archive, bool createPath
 int main(int argc, const char *argv[])
 {
     printVersion();
+    // copy all arguments except program name to vector
+    std::vector<std::string> arguments;
+    for (int i = 1; i < argc; ++i)
+    {
+        arguments.emplace_back(std::string(argv[i]));
+    }
     // check number of arguments and if all arguments can be read
-    if (argc < 2 || !readArguments(argc, argv))
+    if (argc < 2 || !readArguments(arguments))
     {
         printUsage();
         return -1;

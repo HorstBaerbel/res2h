@@ -1,6 +1,7 @@
 #include "res2h.h"
 #include "checksum.h"
 #include "fshelpers.h"
+#include "syshelpers.h"
 
 #include <algorithm>
 #include <fstream>
@@ -46,17 +47,6 @@ static const std::string indent = "    ";
         if (beVerbose) { (a); } \
     }
 
-/// @brief Return the current data and time as a string
-std::string currentDateAndTime()
-{
-    std::stringstream ss;
-    std::time_t t = std::time(nullptr);
-    ss << std::put_time(std::localtime(&t), "%F %T");
-    return ss.str();
-}
-
-// -----------------------------------------------------------------------------
-
 static void printVersion()
 {
     std::cout << "res2h " << RES2H_VERSION_STRING << " - Load plain binary data and dump to a raw C/C++ array." << std::endl
@@ -87,14 +77,13 @@ static void printUsage()
     std::cout << "res2h ./resources/data.bin ./program.exe -a (append archive to executable)" << std::endl;
 }
 
-bool readArguments(int argc, const char *argv[])
+static bool readArguments(const std::vector<std::string> &arguments)
 {
     bool pastFiles = false;
-    for (int i = 1; i < argc; ++i)
+    for (auto aIt = arguments.cbegin(); aIt != arguments.cend(); ++aIt)
     {
-        // read argument from list
-        std::string argument = argv[i];
         // check what it is
+        auto argument = *aIt;
         if (argument == "-a")
         {
             if (!commonHeaderFilePath.empty() || !utilitiesFilePath.empty())
@@ -107,7 +96,7 @@ bool readArguments(int argc, const char *argv[])
                 std::cerr << "Option -a can not be combined with -b" << std::endl;
                 return false;
             }
-            else if (combineResults)
+            if (combineResults)
             {
                 std::cerr << "Option -a can not be combined with -1" << std::endl;
                 return false;
@@ -118,16 +107,11 @@ bool readArguments(int argc, const char *argv[])
         else if (argument == "-1")
         {
             // -u must be used for this to work. check if specified
-            for (int j = 1; j < argc; ++j)
+            if (std::find(arguments.cbegin(), arguments.cend(), "-u") != arguments.cend())
             {
-                // read argument from list
-                std::string argument = argv[j];
-                if (argument == "-u")
-                {
-                    combineResults = true;
-                    pastFiles = true;
-                    break;
-                }
+                combineResults = true;
+                pastFiles = true;
+                break;
             }
             if (!combineResults)
             {
@@ -148,7 +132,7 @@ bool readArguments(int argc, const char *argv[])
                 std::cerr << "Option -b can not be combined with -a" << std::endl;
                 return false;
             }
-            else if (combineResults)
+            if (combineResults)
             {
                 std::cerr << "Warning: Creating binary archive. Option -1 ignored" << std::endl;
                 return false;
@@ -184,10 +168,9 @@ bool readArguments(int argc, const char *argv[])
                 return false;
             }
             // try getting next argument as header file name
-            i++;
-            if (i < argc && argv[i] != nullptr)
+            if (++aIt != arguments.cend())
             {
-                commonHeaderFilePath = naiveLexicallyNormal(stdfs::path(argv[i]));
+                commonHeaderFilePath = naiveLexicallyNormal(stdfs::path(*aIt));
                 if (commonHeaderFilePath.empty())
                 {
                     return false;
@@ -212,11 +195,10 @@ bool readArguments(int argc, const char *argv[])
                 std::cerr << "Option -u can not be combined with -a" << std::endl;
                 return false;
             }
-            // try getting next argument as utility file name
-            i++;
-            if (i < argc && argv[i] != nullptr)
+            // try getting next argument as utility file name++
+            if (++aIt != arguments.cend())
             {
-                utilitiesFilePath = naiveLexicallyNormal(stdfs::path(argv[i]));
+                utilitiesFilePath = naiveLexicallyNormal(stdfs::path(*aIt));
                 if (utilitiesFilePath.empty())
                 {
                     return false;
@@ -264,9 +246,7 @@ bool readArguments(int argc, const char *argv[])
     return true;
 }
 
-// -----------------------------------------------------------------------------
-
-std::vector<FileData> getFileDataFrom(const stdfs::path &inPath, const stdfs::path &outPath, const stdfs::path &parentDir, bool recurse)
+static std::vector<FileData> getFileDataFrom(const stdfs::path &inPath, const stdfs::path &outPath, const stdfs::path &parentDir, bool recurse)
 {
     // get all files from directory
     std::vector<FileData> files;
@@ -309,7 +289,9 @@ std::vector<FileData> getFileDataFrom(const stdfs::path &inPath, const stdfs::pa
             {
                 // replace dir separators by underscores and add in front of file name
                 std::replace(subDirString.begin(), subDirString.end(), '/', '_');
-                newFileName = subDirString + "_" + newFileName;
+                subDirString += "_";
+                subDirString += newFileName;
+                newFileName = subDirString;
             }
             // build new output file name
             temp.outPath = outPath / newFileName;
@@ -350,7 +332,7 @@ std::vector<FileData> getFileDataFrom(const stdfs::path &inPath, const stdfs::pa
     return files;
 }
 
-bool convertFile(FileData &fileData, const stdfs::path &commonHeaderPath, std::ofstream &outStream = badOfStream, bool addHeader = true)
+static bool convertFile(FileData &fileData, const stdfs::path &commonHeaderPath, std::ofstream &outStream = badOfStream, bool addHeader = true)
 {
     if (!stdfs::exists(fileData.inPath))
     {
@@ -467,7 +449,7 @@ bool convertFile(FileData &fileData, const stdfs::path &commonHeaderPath, std::o
     return true;
 }
 
-bool createCommonHeader(const std::vector<FileData> &fileList, const stdfs::path &commonHeaderPath, bool addUtilityFunctions, bool useCConstructs)
+static bool createCommonHeader(const std::vector<FileData> &fileList, const stdfs::path &commonHeaderPath, bool addUtilityFunctions, bool useCConstructs)
 {
     // try opening the output file. truncate it when it exists
     std::ofstream outStream;
@@ -563,7 +545,7 @@ bool createCommonHeader(const std::vector<FileData> &fileList, const stdfs::path
     return true;
 }
 
-bool createUtilities(std::vector<FileData> &fileList, const stdfs::path &utilitiesPath, const stdfs::path &commonHeaderPath, bool useCConstructs, bool addFileData)
+static bool createUtilities(std::vector<FileData> &fileList, const stdfs::path &utilitiesPath, const stdfs::path &commonHeaderPath, bool useCConstructs, bool addFileData)
 {
     // try opening the output file. truncate it when it exists
     std::ofstream outStream;
@@ -586,9 +568,9 @@ bool createUtilities(std::vector<FileData> &fileList, const stdfs::path &utiliti
     // if the data should go to this file too, add it
     if (addFileData)
     {
-        for (auto fdIt = fileList.begin(); fdIt != fileList.cend(); ++fdIt)
+        for (auto & fd : fileList)
         {
-            if (!convertFile(*fdIt, commonHeaderFilePath, outStream, false))
+            if (!convertFile(fd, commonHeaderFilePath, outStream, false))
             {
                 std::cerr << "Failed to convert all files. Aborting" << std::endl;
                 outStream.close();
@@ -649,7 +631,7 @@ bool createUtilities(std::vector<FileData> &fileList, const stdfs::path &utiliti
     return true;
 }
 
-bool createBlob(const std::vector<FileData> &fileList, const stdfs::path &filePath)
+static bool createBlob(const std::vector<FileData> &fileList, const stdfs::path &filePath)
 {
     // try opening the output file. truncate it when it exists
     std::fstream outStream;
@@ -677,8 +659,7 @@ bool createBlob(const std::vector<FileData> &fileList, const stdfs::path &filePa
     // now that we know how many bits, add the correct amount of data for the fixed directory entries to the variable
     directorySize += nrOfEntries * (mustUse64Bit ? RES2H_DIRECTORY_SIZE_64 : RES2H_DIRECTORY_SIZE_32);
     // add magic number to file
-    const unsigned char magicBytes[9] = RES2H_MAGIC_BYTES;
-    outStream.write(reinterpret_cast<const char *>(&magicBytes), sizeof(magicBytes) - 1);
+    outStream.write(reinterpret_cast<const char *>(&RES2H_MAGIC_BYTES), sizeof(RES2H_MAGIC_BYTES) - 1);
     // add version and format flag to file
     const uint32_t fileVersion = RES2H_ARCHIVE_VERSION;
     const uint32_t fileFlags = mustUse64Bit ? 64 : 32;
@@ -709,7 +690,16 @@ bool createBlob(const std::vector<FileData> &fileList, const stdfs::path &filePa
         // add flags
         const uint32_t entryFlags = 0;
         outStream.write(reinterpret_cast<const char *>(&entryFlags), sizeof(uint32_t));
-        uint64_t fileChecksum = mustUse64Bit ? calculateFletcher<uint64_t>(file.inPath.string()) : calculateFletcher<uint32_t>(file.inPath.string());
+        uint64_t fileChecksum = 0;
+        try
+        {
+            fileChecksum = mustUse64Bit ? calculateFletcher<uint64_t>(file.inPath.string()) : calculateFletcher<uint32_t>(file.inPath.string());
+        }
+        catch(const std::runtime_error& e)
+        {
+            std::cerr << "Failed to calculate file checksum: " << e.what() << std::endl;
+            return false;
+        }
         // add data size, offset from file start to start of data and checksum
         outStream.write(reinterpret_cast<const char *>(&file.size), (mustUse64Bit ? sizeof(uint64_t) : sizeof(uint32_t)));
         outStream.write(reinterpret_cast<const char *>(&dataStart), (mustUse64Bit ? sizeof(uint64_t) : sizeof(uint32_t)));
@@ -745,7 +735,7 @@ bool createBlob(const std::vector<FileData> &fileList, const stdfs::path &filePa
                 // try reading data from input file
                 inStream.read(reinterpret_cast<char *>(buffer.data()), sizeof(buffer));
             }
-            catch (const std::ios_base::failure &e)
+            catch (const std::ios_base::failure &/*e*/)
             {
                 // if something other that EOF happended, this is a serious error
                 if (!inStream.eof())
@@ -758,7 +748,7 @@ bool createBlob(const std::vector<FileData> &fileList, const stdfs::path &filePa
             readSize = inStream.gcount();
             // write to output file and increase size of overall data read
             outStream.write(reinterpret_cast<const char *>(buffer.data()), readSize);
-            overallDataSize += readSize;
+            overallDataSize += static_cast<uint64_t>(readSize);
         }
         // close input file
         inStream.close();
@@ -779,7 +769,16 @@ bool createBlob(const std::vector<FileData> &fileList, const stdfs::path &filePa
     IF_BEVERBOSE(std::cout << "Binary archive creation succeeded." << std::endl)
     IF_BEVERBOSE(std::cout << "Archive has " << std::dec << archiveSize << " bytes." << std::endl)
     // calculate checksum of whole file and append to file
-    const uint64_t checksum = mustUse64Bit ? calculateFletcher<uint64_t>(filePath.string()) : calculateFletcher<uint32_t>(filePath.string());
+    uint64_t checksum = 0;
+    try 
+    {
+        checksum = mustUse64Bit ? calculateFletcher<uint64_t>(filePath.string()) : calculateFletcher<uint32_t>(filePath.string());
+    }
+    catch (const std::runtime_error &e)
+    {
+        std::cerr << "Failed to calculate archive checksum: " << e.what() << std::endl;
+        return false;
+    }
     outStream.open(filePath.string(), std::ofstream::out | std::ofstream::binary | std::ofstream::app);
     if (!outStream.is_open() || !outStream.good())
     {
@@ -788,19 +787,22 @@ bool createBlob(const std::vector<FileData> &fileList, const stdfs::path &filePa
     }
     outStream.seekg(0, std::ios::end);
     outStream.write(reinterpret_cast<const char *>(&checksum), (mustUse64Bit ? sizeof(uint64_t) : sizeof(uint32_t)));
-    // close file
     outStream.close();
     IF_BEVERBOSE(std::cout << "Archive Fletcher" << (mustUse64Bit ? "64" : "32") << " checksum is " << std::hex << std::showbase << checksum << "." << std::endl)
     return true;
 }
 
-// -----------------------------------------------------------------------------
-
 int main(int argc, const char *argv[])
 {
     printVersion();
+    // copy all arguments except program name to vector
+    std::vector<std::string> arguments;
+    for (int i = 1; i < argc; ++i)
+    {
+        arguments.emplace_back(std::string(argv[i]));
+    }
     // check number of arguments and if all arguments can be read
-    if (argc < 3 || !readArguments(argc, argv))
+    if (argc < 3 || !readArguments(arguments))
     {
         printUsage();
         return 2;
@@ -884,9 +886,9 @@ int main(int argc, const char *argv[])
                 temp.size = static_cast<uint64_t>(stdfs::file_size(inFilePath));
                 IF_BEVERBOSE(std::cout << "Size is " << temp.size << " bytes." << std::endl)
             }
-            catch (...)
+            catch (const stdfs::filesystem_error &e)
             {
-                std::cerr << "Failed to get size of " << inFilePath << "" << std::endl;
+                std::cerr << "Failed to get size of " << inFilePath << ": " << e.what() << std::endl;
                 temp.size = 0;
             }
             fileList.push_back(temp);
@@ -903,32 +905,40 @@ int main(int argc, const char *argv[])
         }
         else
         {
-            // no. convert files to .c/.cpp. loop through list, converting files
-            for (auto fdIt = fileList.begin(); fdIt != fileList.cend(); ++fdIt)
+            // FIXME: Clang-tidy complains that the following functions can throw an exception
+            // That is not caught before the end of main(). Make sure they don't.
+            try
             {
-                if (!convertFile(*fdIt, commonHeaderFilePath))
+                // no. convert files to .c/.cpp. loop through list, converting files
+                for (auto fdIt = fileList.begin(); fdIt != fileList.cend(); ++fdIt)
                 {
-                    std::cerr << "Failed to convert all files. Aborting" << std::endl;
-                    return 1;
-                }
-            }
-            // do we need to write a header file?
-            if (!commonHeaderFilePath.empty())
-            {
-                if (!createCommonHeader(fileList, commonHeaderFilePath, !utilitiesFilePath.empty(), useC))
-                {
-                    std::cerr << "Failed to create common header file" << std::endl;
-                    return 1;
-                }
-                // do we need to create utilities?
-                if (!utilitiesFilePath.empty())
-                {
-                    if (!createUtilities(fileList, utilitiesFilePath, commonHeaderFilePath, useC, combineResults))
+                    if (!convertFile(*fdIt, commonHeaderFilePath))
                     {
-                        std::cerr << "Failed to create utilities file" << std::endl;
+                        std::cerr << "Failed to convert all files. Aborting" << std::endl;
                         return 1;
                     }
                 }
+                // do we need to write a header file?
+                if (!commonHeaderFilePath.empty())
+                {
+                    if (!createCommonHeader(fileList, commonHeaderFilePath, !utilitiesFilePath.empty(), useC))
+                    {
+                        std::cerr << "Failed to create common header file" << std::endl;
+                        return 1;
+                    }
+                    // do we need to create utilities?
+                    if (!utilitiesFilePath.empty())
+                    {
+                        if (!createUtilities(fileList, utilitiesFilePath, commonHeaderFilePath, useC, combineResults))
+                        {
+                            std::cerr << "Failed to create utilities file" << std::endl;
+                            return 1;
+                        }
+                    }
+                }
+            }
+            catch (...)
+            {
             }
         }
     }

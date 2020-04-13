@@ -14,80 +14,73 @@ stdfs::path naiveRelative(const stdfs::path &path, const stdfs::path &base)
         }
         return naiveRelative(path.relative_path(), base.relative_path());
     }
-    else
+    if (base.has_root_path())
     {
-        if (base.has_root_path())
-        {
-            return path;
-        }
-        // skip all directories both paths have in common
-        auto pathIt = path.begin();
-        auto baseIt = base.begin();
-        while (pathIt != path.end() && baseIt != base.end())
-        {
-            if (*pathIt != *baseIt)
-            {
-                break;
-            }
-            ++pathIt;
-            ++baseIt;
-        }
-        stdfs::path result;
-        // now if there's directories left over in base, we need to add .. for every level
-        while (baseIt != base.end())
-        {
-            if (*baseIt != "." && *baseIt != base.filename())
-            {
-                result /= "..";
-            }
-            ++baseIt;
-        }
-        // now if there's directories left over in path add them to the result
-        while (pathIt != path.end())
-        {
-            if (*pathIt != ".")
-            {
-                result /= *pathIt;
-            }
-            ++pathIt;
-        }
-        return result != "." ? result : stdfs::path();
+        return path;
     }
+    // skip all directories both paths have in common
+    auto pathIt = path.begin();
+    auto baseIt = base.begin();
+    while (pathIt != path.end() && baseIt != base.end())
+    {
+        if (*pathIt != *baseIt)
+        {
+            break;
+        }
+        ++pathIt;
+        ++baseIt;
+    }
+    stdfs::path result;
+    // now if there's directories left over in base, we need to add .. for every level
+    while (baseIt != base.end())
+    {
+        if (*baseIt != "." && *baseIt != base.filename())
+        {
+            result /= "..";
+        }
+        ++baseIt;
+    }
+    // now if there's directories left over in path add them to the result
+    while (pathIt != path.end())
+    {
+        if (*pathIt != ".")
+        {
+            result /= *pathIt;
+        }
+        ++pathIt;
+    }
+    return result != "." ? result : stdfs::path();
 }
 
 stdfs::path naiveLexicallyNormal(const stdfs::path &path, const stdfs::path &base)
 {
-    stdfs::path absPath = stdfs::absolute(path, base);
     stdfs::path result;
-    for (stdfs::path::iterator pIt = absPath.begin(); pIt != absPath.end(); ++pIt)
+    stdfs::path absPath = stdfs::absolute(path, base);
+    for (const auto & part : absPath)
     {
-        if (*pIt == "..")
+        if (part == "..")
         {
             // /a/b/.. is not necessarily /a if b is a symbolic link
-            if (stdfs::is_symlink(result))
-            {
-                result /= *pIt;
-            }
             // /a/b/../.. is not /a/b/.. under most circumstances
             // We can end up with ..s in our result because of symbolic links
-            else if (result.filename() == "..")
+            if (stdfs::is_symlink(result) || result.filename() == "..")
             {
-                result /= *pIt;
+                result /= part;
             }
-            // Otherwise it should be safe to resolve the parent
+            // otherwise it should be safe to resolve the parent
             else
             {
                 result = result.parent_path();
             }
         }
-        else if (*pIt == ".")
+        else if (part == ".")
         {
-            // Ignore .
+            // ignore all .
         }
         else
         {
-            // Just cat other path entries
-            result /= *pIt;
+            // append other path entries
+            result /= part;
         }
     }
     return result;

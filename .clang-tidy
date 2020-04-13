@@ -1,14 +1,10 @@
 ---
 Checks: "*, \
-  -google-runtime-int, \
-  -google-explicit-constructor, \
-  -hicpp-no-malloc, \
-  -hicpp-vararg, \
-  -hicpp-invalid-access-moved, \
-  -hicpp-no-array-decay, \
-  -hicpp-signed-bitwise, \
-  -llvm-header-guard, \
-  -readability-magic-numbers, \
+  -abseil-*, \
+  -cert-env33-c, \
+  -cert-err58-cpp, \
+  -clang-diagnostic-padded, \
+  -clang-analyzer-deadcode.DeadStores, \
   -cppcoreguidelines-avoid-magic-numbers, \
   -cppcoreguidelines-pro-bounds-constant-array-index, \
   -cppcoreguidelines-pro-bounds-pointer-arithmetic, \
@@ -23,13 +19,22 @@ Checks: "*, \
   -fuchsia-multiple-inheritance, \
   -fuchsia-default-arguments-calls, \
   -fuchsia-trailing-return, \
+  -fuchsia-default-arguments-declarations, \
   -fuchsia-statically-constructed-objects, \
+  -google-runtime-references, \
+  -google-runtime-int, \
+  -google-explicit-constructor, \
+  -hicpp-no-malloc, \
+  -hicpp-vararg, \
+  -hicpp-invalid-access-moved, \
+  -hicpp-no-array-decay, \
+  -hicpp-signed-bitwise, \
+  -llvm-header-guard, \
   -modernize-use-trailing-return-type, \
   -misc-definitions-in-headers, \
-  -cert-env33-c, \
-  -cert-err58-cpp, \
-  -clang-diagnostic-padded, \
-  -modernize-concat-nested-namespaces"
+  -modernize-concat-nested-namespaces, \
+  -modernize-raw-string-literal, \
+  -readability-magic-numbers"
 HeaderFilterRegex: ""
 ...
 

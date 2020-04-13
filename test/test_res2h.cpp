@@ -97,7 +97,7 @@ std::vector<FileData> getFileDataFrom(const stdfs::path &inPath, const stdfs::pa
     return files;
 }
 
-bool run(stdfs::path inDir, stdfs::path buildDir)
+bool test_roundtrip(stdfs::path dataDir, const stdfs::path &buildDir)
 {
 #ifdef WIN32
 #ifdef _DEBUG
@@ -117,7 +117,7 @@ bool run(stdfs::path inDir, stdfs::path buildDir)
     stdfs::path outDir = stdfs::path("/tmp") / "out";
     stdfs::path outFile = "test.bin";
     std::cout << "res2h integration test " << RES2H_VERSION_STRING << std::endl;
-    std::cout << "Reading all files from " << inDir << std::endl;
+    std::cout << "Reading all files from " << dataDir << std::endl;
     std::cout << "and packing them to " << outDir / outFile << "." << std::endl;
     std::cout << "Then unpacking all files again and comparing binary data." << std::endl;
     // remove all files in results directory
@@ -136,7 +136,7 @@ bool run(stdfs::path inDir, stdfs::path buildDir)
     // check if the input/output directories exist now
     try
     {
-        inDir = stdfs::canonical(inDir);
+        dataDir = stdfs::canonical(dataDir);
         outDir = stdfs::canonical(outDir);
     }
     catch (const stdfs::filesystem_error &e)
@@ -146,12 +146,12 @@ bool run(stdfs::path inDir, stdfs::path buildDir)
         return false;
     }
     // get all files from source directory
-    std::vector<FileData> fileList = getFileDataFrom(inDir, outDir, inDir, true);
+    std::vector<FileData> fileList = getFileDataFrom(dataDir, outDir, dataDir, true);
     std::stringstream command;
     // run res2h creating binary archive
     std::cout << "Running res2h to create binary archive..." << std::endl
               << std::endl;
-    command << (buildDir / res2hPath) << " " << inDir << " " << (outDir / outFile) << " " << res2hOptions;
+    command << (buildDir / res2hPath) << " " << dataDir << " " << (outDir / outFile) << " " << res2hOptions;
     if (!systemCommand(command.str()))
     {
         // an error occurred running res2h
@@ -185,5 +185,5 @@ bool run(stdfs::path inDir, stdfs::path buildDir)
 
 START_SUITE("Res2h pack/unpack test")
 stdfs::path buildDir = stdfs::current_path();
-RUN_TEST("Check res2h", run(buildDir / "../../test/data/", buildDir))
+RUN_TEST("Check res2h roundtrip", test_roundtrip(buildDir / "../../test/data/", buildDir))
 END_SUITE

@@ -64,7 +64,6 @@ class Res2h
 
     /// @brief Try to read archive header from an archive file or an embedded archive.
     /// @param archivePath Archive path.
-    /// @param magicOffset Offset to magic bytes.
     /// @return Returns archive info if archive can be opened and information read properly.
     /// @throw Throws a Res2hException file can't be opened or archive is corrupted
     ArchiveInfo archiveInfo(const std::string &archivePath) const;
@@ -96,12 +95,12 @@ class Res2h
 
   private:
     /// @brief Not default-constructible. Use instance().
-    Res2h();
+    Res2h() = default;
 
     /// @brief Load a resource from disk.
-    ResourceInfo loadResourceFromDisk(const std::string &filePath);
+    static ResourceInfo loadResourceFromDisk(const std::string &filePath);
     /// @brief Load a resource from a binary archive.
-    ResourceInfo loadResourceFromArchive(const ResourceInfo &entry, const ArchiveInfo &archive, bool checkChecksum);
+    static ResourceInfo loadResourceFromArchive(const ResourceInfo &entry, const ArchiveInfo &archive, bool checkChecksum);
 
     /// @brief Holds archive information and resources.
     struct ArchiveEntry

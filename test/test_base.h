@@ -64,7 +64,7 @@ auto main(int /*argc*/, char **/*argv*/) -> int\
     catch(...) { std::cerr << std::string("Check failed: ") + STRINGIZE(a) "==" STRINGIZE(b) LINEINFO; return false; }
 // Compare two floating point values for equality using an epsilon, else print "a == b" and return false
 #define CHECK_FLOAT_EQUAL(a, b, epsilon) \
-    if (std::abs(a - b) > epsilon) { std::cerr << "Check failed: " << STRINGIZE(a) "==" STRINGIZE(b) LINEINFO; return false; }
+    if (std::abs((a) - (b)) > (epsilon)) { std::cerr << "Check failed: " << STRINGIZE(a) "==" STRINGIZE(b) LINEINFO; return false; }
 // Check if a statement a throws exception e and return true only if it does
 #define CHECK_THROW(a, ex) \
     try { (a); std::cerr << "Check failed. Exception expected: " << STRINGIZE(a) LINEINFO; return false; } \

@@ -9,10 +9,6 @@ Res2hException::Res2hException(const char *errorString) noexcept
 {
 }
 
-Res2h::Res2h()
-{
-}
-
 Res2h &Res2h::instance()
 {
     static Res2h instance;
@@ -38,8 +34,8 @@ uint64_t Res2h::findArchiveStartOffset(const std::string &archivePath) const
     }
     // try to read magic bytes
     std::array<char, 8> magicBytes{};
-    inStream.read(reinterpret_cast<char *>(&magicBytes), sizeof(magicBytes));
-    std::string magicString(reinterpret_cast<char *>(&magicBytes), sizeof(magicBytes));
+    inStream.read(reinterpret_cast<char *>(magicBytes.data()), sizeof(magicBytes));
+    std::string magicString(reinterpret_cast<char *>(magicBytes.data()), sizeof(magicBytes));
     if (magicString == RES2H_MAGIC_BYTES)
     {
         // found. close and return offset
@@ -54,15 +50,15 @@ uint64_t Res2h::findArchiveStartOffset(const std::string &archivePath) const
     while (inStream.good())
     {
         // read block of data and convert to string
-        inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
-        std::string magicString(reinterpret_cast<char *>(&buffer), sizeof(buffer));
+        inStream.read(reinterpret_cast<char *>(buffer.data()), sizeof(buffer));
+        std::string haystack(reinterpret_cast<char *>(buffer.data()), sizeof(buffer));
         // try to find magic bytes
-        auto magicPosition = magicString.rfind(RES2H_MAGIC_BYTES);
+        auto magicPosition = haystack.rfind(RES2H_MAGIC_BYTES);
         if (magicPosition != std::string::npos)
         {
             // found. close and return offset
             inStream.close();
-            return static_cast<uint64_t>(inStream.tellg() + static_cast<std::streampos>(magicPosition));
+            return static_cast<uint64_t>(inStream.tellg()) + magicPosition;
         }
         // check if we're already at the start of the stream
         if (inStream.tellg() == std::streampos(0))
@@ -92,6 +88,7 @@ Res2h::ArchiveInfo Res2h::archiveInfo(const std::string &archivePath) const
     ArchiveInfo info;
     info.filePath = archivePath;
     info.offsetInFile = findArchiveStartOffset(archivePath);
+    const std::streamsize nrOfBytesSizeOrChecksum = info.bits == 64 ? sizeof(uint64_t) : sizeof(uint32_t);
     // open archive again
     std::ifstream inStream;
     inStream.open(archivePath, std::ios_base::in | std::ios_base::binary);
@@ -100,7 +97,7 @@ Res2h::ArchiveInfo Res2h::archiveInfo(const std::string &archivePath) const
         throw Res2hException("Failed to open archive for reading");
     }
     // nice. magic bytes ok. read file version
-    inStream.seekg(info.offsetInFile + RES2H_OFFSET_FILE_VERSION);
+    inStream.seekg(static_cast<std::streamoff>(info.offsetInFile + RES2H_OFFSET_FILE_VERSION));
     inStream.read(reinterpret_cast<char *>(&info.fileVersion), sizeof(uint32_t));
     if (info.fileVersion != RES2H_ARCHIVE_VERSION)
     {
@@ -108,7 +105,7 @@ Res2h::ArchiveInfo Res2h::archiveInfo(const std::string &archivePath) const
         throw Res2hException("Bad archive file version");
     }
     // check file flags (32/64 bit)
-    inStream.seekg(info.offsetInFile + RES2H_OFFSET_FORMAT_FLAGS);
+    inStream.seekg(static_cast<std::streamoff>(info.offsetInFile + RES2H_OFFSET_FORMAT_FLAGS));
     inStream.read(reinterpret_cast<char *>(&info.formatFlags), sizeof(uint32_t));
     // the low 8 bit of the flags is the archive bit depth, e.g. 32/64 bit
     info.bits = info.formatFlags & 0x000000FF;
@@ -119,8 +116,8 @@ Res2h::ArchiveInfo Res2h::archiveInfo(const std::string &archivePath) const
     }
     // get size of the whole archive.
     uint64_t archiveSize = 0;
-    inStream.seekg(info.offsetInFile + RES2H_OFFSET_ARCHIVE_SIZE);
-    inStream.read(reinterpret_cast<char *>(&archiveSize), (info.bits == 64 ? sizeof(uint64_t) : sizeof(uint32_t)));
+    inStream.seekg(static_cast<std::streamoff>(info.offsetInFile + RES2H_OFFSET_ARCHIVE_SIZE));
+    inStream.read(reinterpret_cast<char *>(&archiveSize), nrOfBytesSizeOrChecksum);
     info.size = archiveSize;
     if (info.size <= 0)
     {
@@ -129,8 +126,8 @@ Res2h::ArchiveInfo Res2h::archiveInfo(const std::string &archivePath) const
     }
     // read checksum from end of file
     uint64_t readChecksum = 0;
-    inStream.seekg(info.offsetInFile + info.size - (info.bits == 64 ? sizeof(uint64_t) : sizeof(uint32_t)));
-    inStream.read(reinterpret_cast<char *>(&readChecksum), (info.bits == 64 ? sizeof(uint64_t) : sizeof(uint32_t)));
+    inStream.seekg(static_cast<std::streamoff>(info.offsetInFile + info.size - static_cast<uint64_t>(nrOfBytesSizeOrChecksum)));
+    inStream.read(reinterpret_cast<char *>(&readChecksum), nrOfBytesSizeOrChecksum);
     info.checksum = readChecksum;
     // control checksum. close first for calling checksum function
     inStream.close();
@@ -183,7 +180,7 @@ bool Res2h::loadArchive(const std::string &archivePath)
     ArchiveEntry entry;
     entry.archive = info;
     // file version ok. skip currently unused flags and archive size
-    inStream.seekg(info.offsetInFile + (info.bits == 64 ? RES2H_OFFSET_NO_OF_FILES_64 : RES2H_OFFSET_NO_OF_FILES_32));
+    inStream.seekg(static_cast<std::streamoff>(info.offsetInFile + (info.bits == 64 ? RES2H_OFFSET_NO_OF_FILES_64 : RES2H_OFFSET_NO_OF_FILES_32)));
     // read number of directory entries
     uint32_t nrOfDirectoryEntries = 0;
     inStream.read(reinterpret_cast<char *>(&nrOfDirectoryEntries), sizeof(uint32_t));
@@ -244,29 +241,26 @@ Res2h::ResourceInfo Res2h::loadResource(const std::string &filePath, bool keepIn
         }
         throw Res2hException("Failed to load file from archive");
     }
-    else
+    // find file in the disk resources list
+    for (auto &resource : m_diskResources)
     {
-        // find file in the disk resources list
-        for (auto &resource : m_diskResources)
+        if (resource.filePath == filePath)
         {
-            if (resource.filePath == filePath)
+            // file found. check if data is in memory
+            if (!resource.data.empty())
             {
-                // file found. check if data is in memory
-                if (!resource.data.empty())
-                {
-                    return resource;
-                }
-                // no. load data first
-                auto tempEntry = loadResourceFromDisk(filePath);
-                if (keepInCache)
-                {
-                    resource = tempEntry;
-                }
-                return tempEntry;
+                return resource;
             }
+            // no. load data first
+            auto tempEntry = loadResourceFromDisk(filePath);
+            if (keepInCache)
+            {
+                resource = tempEntry;
+            }
+            return tempEntry;
         }
-        throw Res2hException("Failed to load file from disk");
     }
+    throw Res2hException("Failed to load file from disk");
 }
 
 Res2h::ResourceInfo Res2h::loadResourceFromDisk(const std::string &filePath)
@@ -286,7 +280,7 @@ Res2h::ResourceInfo Res2h::loadResourceFromDisk(const std::string &filePath)
     if (fileSize > 0)
     {
         // allocate and try reading data
-        std::vector<uint8_t> fileData(fileSize);
+        std::vector<uint8_t> fileData(static_cast<std::size_t>(fileSize));
         try
         {
             inStream.read(reinterpret_cast<char *>(fileData.data()), fileSize);
@@ -302,12 +296,12 @@ Res2h::ResourceInfo Res2h::loadResourceFromDisk(const std::string &filePath)
         // seems to have worked. store data.
         temp.filePath = filePath;
         temp.data = fileData;
-        temp.dataSize = fileSize;
+        temp.dataSize = static_cast<uint64_t>(fileSize);
     }
     return temp;
 }
 
-typename Res2h::ResourceInfo Res2h::loadResourceFromArchive(const ResourceInfo &entry, const ArchiveInfo &archive, bool checkChecksum)
+Res2h::ResourceInfo Res2h::loadResourceFromArchive(const ResourceInfo &entry, const ArchiveInfo &archive, bool checkChecksum)
 {
     ResourceInfo temp = entry;
     // try to open archive file
@@ -318,12 +312,12 @@ typename Res2h::ResourceInfo Res2h::loadResourceFromArchive(const ResourceInfo &
         throw Res2hException("Failed to open file for reading");
     }
     // opened ok. move to data offset
-    inStream.seekg(archive.offsetInFile + temp.dataOffset);
+    inStream.seekg(static_cast<std::streamoff>(archive.offsetInFile + temp.dataOffset));
     // allocate and try reading data
     temp.data = std::vector<uint8_t>(temp.dataSize);
     try
     {
-        inStream.read(reinterpret_cast<char *>(temp.data.data()), temp.dataSize);
+        inStream.read(reinterpret_cast<char *>(temp.data.data()), static_cast<std::streamsize>(temp.dataSize));
     }
     catch (const std::ios_base::failure & /*e*/)
     {
@@ -340,7 +334,7 @@ typename Res2h::ResourceInfo Res2h::loadResourceFromArchive(const ResourceInfo &
         {
             return temp;
         }
-        else if (archive.bits == 64 && temp.checksum == calculateFletcher<uint64_t>(temp.data.data(), temp.dataSize))
+        if (archive.bits == 64 && temp.checksum == calculateFletcher<uint64_t>(temp.data.data(), temp.dataSize))
         {
             return temp;
         }
@@ -356,12 +350,12 @@ std::vector<std::reference_wrapper<const Res2h::ResourceInfo>> Res2h::resourceIn
     {
         for (auto &resource : entry.resources)
         {
-            result.push_back(std::reference_wrapper<const ResourceInfo>(resource));
+            result.emplace_back(std::reference_wrapper<const ResourceInfo>(resource));
         }
     }
     for (auto &resource : m_diskResources)
     {
-        result.push_back(std::reference_wrapper<const ResourceInfo>(resource));
+        result.emplace_back(std::reference_wrapper<const ResourceInfo>(resource));
     }
     return result;
 }

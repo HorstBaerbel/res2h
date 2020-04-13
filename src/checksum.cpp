@@ -1,11 +1,11 @@
 #include "checksum.h"
 
 template <>
-uint16_t calculateFletcher(const uint8_t *data, const uint16_t dataSize, uint16_t checksum)
+uint16_t calculateFletcher(const uint8_t *data, uint16_t dataSize, uint16_t checksum)
 {
     auto sum1 = static_cast<uint8_t>(checksum);
     auto sum2 = static_cast<uint8_t>(checksum >> 8);
-    if (data && dataSize > 0)
+    if (data != nullptr && dataSize > 0)
     {
         for (uint16_t index = 0; index < dataSize; ++index)
         {
@@ -19,13 +19,13 @@ uint16_t calculateFletcher(const uint8_t *data, const uint16_t dataSize, uint16_
 }
 
 template <>
-uint32_t calculateFletcher(const uint8_t *data, const uint32_t dataSize, uint32_t checksum)
+uint32_t calculateFletcher(const uint8_t *data, uint32_t dataSize, uint32_t checksum)
 {
     // calculate how many full words the input has
     const uint32_t words = dataSize / 2;
     auto sum1 = static_cast<uint16_t>(checksum);
     auto sum2 = static_cast<uint16_t>(checksum >> 16);
-    if (data && dataSize > 0)
+    if (data != nullptr && dataSize > 0)
     {
         // now calculate the fletcher32 checksum from words
         auto *data16 = reinterpret_cast<const uint16_t *>(data);
@@ -51,13 +51,13 @@ uint32_t calculateFletcher(const uint8_t *data, const uint32_t dataSize, uint32_
 }
 
 template <>
-uint64_t calculateFletcher(const uint8_t *data, const uint64_t dataSize, uint64_t checksum)
+uint64_t calculateFletcher(const uint8_t *data, uint64_t dataSize, uint64_t checksum)
 {
     // calculate how many full dwords the input has
     const uint64_t dwords = dataSize / 4;
     auto sum1 = static_cast<uint32_t>(checksum);
     auto sum2 = static_cast<uint32_t>(checksum >> 32);
-    if (data && dataSize > 0)
+    if (data != nullptr && dataSize > 0)
     {
         // now calculate the fletcher64 checksum from dwords
         auto data32 = reinterpret_cast<const uint32_t *>(data);

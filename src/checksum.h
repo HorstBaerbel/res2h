@@ -21,54 +21,50 @@ T calculateFletcher(const uint8_t *data, T dataSize, T checksum = 0);
 /// @return Returns the Fletcher checksum for the file stream or the initial checksum upon failure.
 /// @note Based on this: https://en.wikipedia.org/wiki/Fletcher's_checksum.
 template <typename T>
-T calculateFletcher(const std::string &filePath, const T dataSize = 0, T checksum = 0)
+T calculateFletcher(const std::string &filePath, T dataSize = 0, T checksum = 0)
 {
     // open file
     std::ifstream inStream;
     inStream.open(filePath, std::ios_base::in | std::ios_base::binary);
-    if (inStream.is_open() && inStream.good())
+    if (!inStream.is_open() || !inStream.good())
     {
-        // loop until EOF or dataSize reached
-        T rollingSize = 0;
-        std::array<uint8_t, 4096> buffer{};
-        while (!inStream.eof() && inStream.good())
+        throw std::runtime_error("Failed to open file for reading");
+    }
+    // loop until EOF or dataSize reached
+    T rollingSize = 0;
+    std::array<uint8_t, 4096> buffer{};
+    while (!inStream.eof() && inStream.good())
+    {
+        T readSize = sizeof(buffer);
+        try
         {
-            T readSize = sizeof(buffer);
-            try
+            // try reading data from input file
+            inStream.read(reinterpret_cast<char *>(buffer.data()), sizeof(buffer));
+        }
+        catch (const std::ios_base::failure & /*e*/)
+        {
+            // check if were at EOF, or if reading failed for some other reason
+            if (!inStream.eof())
             {
-                // try reading data from input file
-                inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
-            }
-            catch (const std::ios_base::failure & /*e*/)
-            {
-                // check if were at EOF, or if reading failed for some other reason
-                if (!inStream.eof())
-                {
-                    throw std::runtime_error("calculateFletcher - File read error");
-                }
-            }
-            // store how many bytes were actually read
-            readSize = static_cast<T>(inStream.gcount());
-            // clamp to dataSize if the caller wants to checksum only part of the file
-            if (dataSize > 0 && rollingSize + readSize > dataSize)
-            {
-                readSize = dataSize - rollingSize;
-            }
-            // calculate checksum for buffer
-            checksum = calculateFletcher<T>(buffer.data(), readSize, checksum);
-            // update size already read
-            rollingSize += readSize;
-            if (dataSize > 0 && rollingSize >= dataSize)
-            {
-                break;
+                throw std::runtime_error("File read error");
             }
         }
-        // close file
-        inStream.close();
+        // store how many bytes were actually read
+        readSize = static_cast<T>(inStream.gcount());
+        // clamp to dataSize if the caller wants to checksum only part of the file
+        if (dataSize > 0 && rollingSize + readSize > dataSize)
+        {
+            readSize = dataSize - rollingSize;
+        }
+        // calculate checksum for buffer
+        checksum = calculateFletcher<T>(buffer.data(), readSize, checksum);
+        // update size already read
+        rollingSize += readSize;
+        if (dataSize > 0 && rollingSize >= dataSize)
+        {
+            break;
+        }
     }
-    else
-    {
-        throw std::runtime_error("calculateFletcher - Failed to open file for reading");
-    }
+    inStream.close();
     return checksum;
 }
