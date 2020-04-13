@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.1)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
+# Make sure we generate a compile command database for clang-tidy
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 #-------------------------------------------------------------------------------
 # Set up compiler flags and excutable names
 include(compiler_checks)
