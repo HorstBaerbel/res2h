@@ -1,8 +1,8 @@
 #pragma once
 
 #include <array>
-#include <fstream>
 #include <cstdint>
+#include <fstream>
 #include <string>
 
 /// @brief Create Fletcher checksum from data.
@@ -30,7 +30,7 @@ T calculateFletcher(const std::string &filePath, const T dataSize = 0, T checksu
     {
         // loop until EOF or dataSize reached
         T rollingSize = 0;
-		std::array<uint8_t, 4096> buffer{};
+        std::array<uint8_t, 4096> buffer{};
         while (!inStream.eof() && inStream.good())
         {
             T readSize = sizeof(buffer);
@@ -39,13 +39,13 @@ T calculateFletcher(const std::string &filePath, const T dataSize = 0, T checksu
                 // try reading data from input file
                 inStream.read(reinterpret_cast<char *>(&buffer), sizeof(buffer));
             }
-            catch (const std::ios_base::failure &/*e*/)
+            catch (const std::ios_base::failure & /*e*/)
             {
-				// check if were at EOF, or if reading failed for some other reason
-				if (!inStream.eof())
-				{
-					throw std::runtime_error("calculateFletcher - File read error");
-				}
+                // check if were at EOF, or if reading failed for some other reason
+                if (!inStream.eof())
+                {
+                    throw std::runtime_error("calculateFletcher - File read error");
+                }
             }
             // store how many bytes were actually read
             readSize = static_cast<T>(inStream.gcount());
@@ -66,10 +66,9 @@ T calculateFletcher(const std::string &filePath, const T dataSize = 0, T checksu
         // close file
         inStream.close();
     }
-	else
-	{
-		throw std::runtime_error("calculateFletcher - Failed to open file for reading");
-	}
-	
+    else
+    {
+        throw std::runtime_error("calculateFletcher - Failed to open file for reading");
+    }
     return checksum;
 }

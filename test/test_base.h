@@ -20,17 +20,17 @@
 // END_SUITE -> Print result and pass success/failure value to caller
 //
 
-#define START_SUITE( name )\
+#define START_SUITE(name)\
 auto main(int /*argc*/, char **/*argv*/) -> int\
 {\
     std::cout << "Test suite \"" << (name) << "\"..." << std::endl;\
     static bool suiteSucceded = true;
 
-#define RUN_TEST( name, func )\
+#define RUN_TEST(name, func)\
 {\
     std::cout << "Test \"" << (name) << "\"... ";\
     try {\
-        if (func()) { std::cout << "succeed." << std::endl; }\
+        if (func) { std::cout << "succeed." << std::endl; }\
         else { std::cout << " Failed." << std::endl; suiteSucceded = false; }\
     }\
     catch(...) { std::cout << " Failed." << std::endl; suiteSucceded = false; }\
@@ -59,12 +59,17 @@ auto main(int /*argc*/, char **/*argv*/) -> int\
     try { if (!(a)) { std::cerr << "Check failed: " << STRINGIZE(a) LINEINFO; return false; }} \
     catch(...) { std::cerr << "Check failed: " << STRINGIZE(a) LINEINFO; return false; }
 // Check if a == b, else print "a == b" and return false. Use if CHECK can not be used
-#define CHECK_EQUAL(a, b)\
-    try { if ((a) != (b)) { std::cerr << std::string("Check failed: ") + (STRINGIZE(a) "==" STRINGIZE(b) LINEINFO); return false; }}\
+#define CHECK_EQUAL(a, b) \
+    try { if ((a) != (b)) { std::cerr << std::string("Check failed: ") + (STRINGIZE(a) "==" STRINGIZE(b) LINEINFO); return false; }} \
     catch(...) { std::cerr << std::string("Check failed: ") + STRINGIZE(a) "==" STRINGIZE(b) LINEINFO; return false; }
 // Compare two floating point values for equality using an epsilon, else print "a == b" and return false
-#define CHECK_FLOAT_EQUAL(a, b, epsilon) if (std::abs(a - b) > epsilon) { std::cerr << "Check failed: " << STRINGIZE(a) "==" STRINGIZE(b) LINEINFO; return false; }
+#define CHECK_FLOAT_EQUAL(a, b, epsilon) \
+    if (std::abs(a - b) > epsilon) { std::cerr << "Check failed: " << STRINGIZE(a) "==" STRINGIZE(b) LINEINFO; return false; }
 // Check if a statement a throws exception e and return true only if it does
-#define CHECK_THROW(a, ex)\
-    try { (a); { std::cerr << "Check failed. Exception expected: " << STRINGIZE(a) LINEINFO; return false; }}\
-    catch(const ex &e) { return true; }
+#define CHECK_THROW(a, ex) \
+    try { (a); std::cerr << "Check failed. Exception expected: " << STRINGIZE(a) LINEINFO; return false; } \
+    catch(const ex &e) { }
+// Check if a statement a does not throw an exception and return true if so
+#define CHECK_NOTHROW(a) \
+    try { (a); } \
+    catch(...) { std::cerr << "Check failed. Exception caught: " << STRINGIZE(a) LINEINFO; return false; }

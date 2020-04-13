@@ -61,8 +61,8 @@ static bool test_fletcher_sameresult()
 }
 
 START_SUITE("Checksum functions")
-RUN_TEST("Fletcher results", test_fletcher_result)
-RUN_TEST("Fletcher all zeros", test_fletcher_zero)
-RUN_TEST("Fletcher different lengths", test_fletcher_difflengths)
-RUN_TEST("Fletcher gives consistent results", test_fletcher_sameresult)
+RUN_TEST("Fletcher results", test_fletcher_result())
+RUN_TEST("Fletcher all zeros", test_fletcher_zero())
+RUN_TEST("Fletcher different lengths", test_fletcher_difflengths())
+RUN_TEST("Fletcher gives consistent results", test_fletcher_sameresult())
 END_SUITE

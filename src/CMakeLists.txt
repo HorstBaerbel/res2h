@@ -32,7 +32,6 @@ endif()
 # Add some compiler flags so we see warnings early on
 EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wall")
 EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wextra")
-EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Weffc++")
 EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wconversion")
 EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wnon-virtual-dtor")
 EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wold-style-cast")
@@ -54,6 +53,7 @@ set(R2H_SOURCES
 	${PROJECT_SOURCE_DIR}/res2h.cpp
 	${PROJECT_SOURCE_DIR}/checksum.cpp
 	${PROJECT_SOURCE_DIR}/fshelpers.cpp
+	${PROJECT_SOURCE_DIR}/syshelpers.cpp
 )
 
 # define headers and sources for dump executable
@@ -67,6 +67,7 @@ set(R2H_DUMP_SOURCES
 	${PROJECT_SOURCE_DIR}/res2hdump.cpp
 	${PROJECT_SOURCE_DIR}/checksum.cpp
 	${PROJECT_SOURCE_DIR}/fshelpers.cpp
+	${PROJECT_SOURCE_DIR}/syshelpers.cpp
 )
 
 #-------------------------------------------------------------------------------

@@ -23,3 +23,11 @@ bool startsWithPrefix(const stdfs::path &path, const stdfs::path &prefix);
 
 /// @brief Returns true if path has an recursive symlink.
 bool hasRecursiveSymlink(const stdfs::path &path);
+
+/// @brief Appends the content of srcFile to the end of dstFile.
+/// @throw std::runtime_exception if one of the files can't be opened or reading / writing fails.
+void appendFileContent(const stdfs::path &dstFile, const stdfs::path &srcFile);
+
+/// @brief Compare the content of file a to file b and returns true if the content is binary equal.
+/// @throw std::runtime_exception if one of the files can't be opened or reading fails.
+bool compareFileContent(const stdfs::path &a, const stdfs::path &b);

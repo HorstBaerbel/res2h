@@ -1,11 +1,11 @@
-# A flexible resource compiler similar to bin2h
+# A flexible resource compiler similar to bin2h and qrc
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![Build](https://github.com/HorstBaerbel/res2h/workflows/Build/badge.svg) ![Tests](https://github.com/HorstBaerbel/res2h/workflows/Tests/badge.svg) ![Clang-format](https://github.com/HorstBaerbel/res2h/workflows/Clang-format/badge.svg) ![Clang-tidy](https://github.com/HorstBaerbel/res2h/workflows/Clang-tidy/badge.svg)
 
 **res2h** can:
 
 * Convert binary data from arbitrary files to a raw hex C/C++ arrays for including them into your software (similar to [bin2h](http://code.google.com/p/bin2h/) with added functionality).
-* Compile the data from all the files into one binary archive file (like [tar](https://en.wikipedia.org/wiki/Tar_(computing))) which you can then load from disk or append to the application executable and access at runtime.
+* Compile the data from all the files into one binary archive file (like [tar](https://en.wikipedia.org/wiki/Tar_(computing)) or [qrc](https://doc.qt.io/qt-5/resources.html)) which you can then load from disk or append to the application executable and access at runtime. No external libraries are needed for this.
 
 The main tools are [res2h](#res2h) which can convert files to .h/.cpp files or pack them into binary archives and [res2hdump](#res2hdump) which lets you view or unpack those binary archives.
 
@@ -185,10 +185,6 @@ res2hdump ARCHIVE [OUTDIR] [OPTIONS]
 * Extract all files from an archive with subdirectories: ```res2hdump ./resources/data.bin ./resources -f```
 * Extract files from embedded archive: ```res2hdump ./resources/program.exe ./resources```
 
-## run_test
-
-run_test is a script that lets you test res2h and res2hdump after compiling. It uses res2h with some options to create C++ files and a binary archive from example files in /test. It then unpacks this archive to /results again.
-
 ## Binary archive format
 
 <table>
@@ -241,12 +237,16 @@ run_test is a script that lets you test res2h and res2hdump after compiling. It 
         <td>End - 04/08</td><td>uint32_t/uint64_t</td><td>Fletcher32/64 checksum of whole file up to this point</td>
     </tr>
 </table>
+Obviously with a 32bit archive you're limited to ~4GB for the whole binary file and ~4GB per data entry. Res2h will automagically create a 32bit archive to save space if data permits it, or a 64bit archive if needed. This is all transparently handled by res2hinterface, so you don't really need to care about it.
 
 ## Todo
 
 * Fix Clang-tidy action.
 * More cleanup. More modern C++14.
 * More unit tests.
+* Use nested exceptions.
+* Unicode support.
+* Save space on .c / .cpp files by outputting 32bit or even 64bit hex strings.
 * Re-use compile results of "Build" action in "Unit tests" and "Clang-tidy" action to save time.
 * Use [cxxopts](https://github.com/jarro2783/cxxopts) for argument parsing.
 * Add optional resource compression.
