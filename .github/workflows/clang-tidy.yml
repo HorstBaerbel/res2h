@@ -20,7 +20,7 @@ jobs:
     - name: Run cmake
       run: cmake -S . -B build
     - name: Run clang-tidy
-      run: ./github/workflows/run-clang-tidy.py
+      run: .github/workflows/run-clang-tidy.py
 #    - name: Set shell options and run clang-tidy
 #      run: |
 #          shopt -s globstar extglob failglob
