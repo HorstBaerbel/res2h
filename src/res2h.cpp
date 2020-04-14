@@ -55,9 +55,8 @@ static void printVersion()
 
 static void printUsage()
 {
-    std::cout << std::endl;
-    std::cout << "Usage: res2h INFILE/INDIR OUTFILE/OUTDIR [options]" << std::endl;
-    std::cout << "Valid options:" << std::endl;
+    std::cout << "Usage: res2h INFILE/INDIR OUTFILE/OUTDIR [OPTIONS]" << std::endl;
+    std::cout << "Valid OPTIONS:" << std::endl;
     std::cout << "-r Recurse into subdirectories below indir." << std::endl;
     std::cout << "-c Use .c files and C-arrays for storing the data definitions, else" << std::endl;
     std::cout << "   uses .cpp files and std::vector/std::map." << std::endl;

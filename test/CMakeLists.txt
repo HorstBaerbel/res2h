@@ -28,6 +28,7 @@ elseif (${CMAKE_CXX_COMPILER_ID} MATCHES "MSVC")
 endif()
 
 # Add some compiler flags so we see warnings early on
+# See more suggestions here: https://stackoverflow.com/a/9862800/1121150
 EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wall")
 EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wextra")
 EnableIfCompilerSupports(CMAKE_CXX_FLAGS "-Wconversion")

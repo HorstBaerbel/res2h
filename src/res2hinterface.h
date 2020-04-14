@@ -59,28 +59,32 @@ class Res2h
 
     /// @brief Try to find archive header in an archive file or an embedded archive.
     /// @param archivePath Archive path.
-    /// @return Returns offset if archive can be opened and its magic bytes header is found. Throws an exception otherwise.
+    /// @return Returns offset if archive can be opened and its magic bytes header is found.
+    /// @throw Throws an Res2hException otherwise.
     uint64_t findArchiveStartOffset(const std::string &archivePath) const;
 
     /// @brief Try to read archive header from an archive file or an embedded archive.
     /// @param archivePath Archive path.
     /// @return Returns archive info if archive can be opened and information read properly.
-    /// @throw Throws a Res2hException file can't be opened or archive is corrupted
+    /// @throw Throws a Res2hException file can't be opened or archive is corrupted.
     ArchiveInfo archiveInfo(const std::string &archivePath) const;
 
     /// @brief Open archive file or file with embedded archive from disk and load directory into memory.
     /// You can add as many archives as you want. This does NOT load the actual data yet, only the directory.
+    /// For loading the data, use @sa loadResource().
     /// @param archivePath Archive path.
     /// @note If the archive is already loaded, all data will be released and it will be loaded all over again!
     /// @return Returns true if opening and loading the archive directory worked.
+    /// @throw Throws a Res2hException file can't be opened or archive is corrupted.
     bool loadArchive(const std::string &archivePath);
 
-    /// @brief Load file content. Can be either a file on disk or a file in a binary archive.
+    /// @brief Load resource / file content. Can be either a file on disk or a file in a binary archive.
     /// @param filePath Path to the file. If it start with ":/" it is considered to be in a binary archive.
     /// @param keepInCache Optional. Pass true to keep the resource in memory if you need it more than once. Memory archive data is never cached, because it is already in memory.
     /// @param checkChecksum Optional. Pass true to check the calculated checksum of the data against the checksum stored in the archive.
     /// @return Returns a struct containing the data or throws an exception if it fails to do so.
     /// @note When loading data from a binary archive, you must load the archive with @sa loadArchive() before.
+    /// @throw Throws a Res2hException file can't be found on disk / in an archive or the archive is corrupted.
     ResourceInfo loadResource(const std::string &filePath, bool keepInCache = false, bool checkChecksum = true);
 
     /// @brief Return information about all resources on disk and in archive, loaded or not.
@@ -98,8 +102,10 @@ class Res2h
     Res2h() = default;
 
     /// @brief Load a resource from disk.
+    /// @throw Throws a Res2hException file can't be found on disk or reading fails.
     static ResourceInfo loadResourceFromDisk(const std::string &filePath);
     /// @brief Load a resource from a binary archive.
+    /// @throw Throws a Res2hException file can't be found in an archive or the archive is corrupted.
     static ResourceInfo loadResourceFromArchive(const ResourceInfo &entry, const ArchiveInfo &archive, bool checkChecksum);
 
     /// @brief Holds archive information and resources.
