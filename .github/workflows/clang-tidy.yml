@@ -20,7 +20,8 @@ jobs:
     - name: Run cmake
       run: cmake -S . -B build
     - name: Run clang-tidy
-      run: .github/workflows/run-clang-tidy.py
+      run: python3 ./run-clang-tidy.py
+# The following step seems to crash sometimes due to unkown reasons:
 #    - name: Set shell options and run clang-tidy
 #      run: |
 #          shopt -s globstar extglob failglob
