@@ -19,7 +19,9 @@ jobs:
           sudo update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-9 100
     - name: Run cmake
       run: cmake -S . -B build
-    - name: Set shell options and run clang-tidy
-      run: |
-          shopt -s globstar extglob failglob
-          ls **/*.@(h|H|hh|hpp|hxx|h++|c|C|cc|cpp|cxx|c++) | grep -v build | tr "\n" " " | xargs clang-tidy -p=build
+    - name: Run clang-tidy
+      run: run-clang-tidy.py
+#    - name: Set shell options and run clang-tidy
+#      run: |
+#          shopt -s globstar extglob failglob
+#          ls **/*.@(h|H|hh|hpp|hxx|h++|c|C|cc|cpp|cxx|c++) | grep -v build | tr "\n" " " | xargs clang-tidy -p=build
