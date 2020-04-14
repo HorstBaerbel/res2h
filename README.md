@@ -1,11 +1,12 @@
-# A flexible resource compiler similar to bin2h and qrc
+# res2h - A flexible resource compiler similar to bin2h and qrc
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![Build](https://github.com/HorstBaerbel/res2h/workflows/Build/badge.svg) ![Tests](https://github.com/HorstBaerbel/res2h/workflows/Tests/badge.svg) ![Clang-format](https://github.com/HorstBaerbel/res2h/workflows/Clang-format/badge.svg) ![Clang-tidy](https://github.com/HorstBaerbel/res2h/workflows/Clang-tidy/badge.svg)
 
 **res2h** can:
 
 * Convert binary data from arbitrary files to a raw hex C/C++ arrays for including them into your software (similar to [bin2h](http://code.google.com/p/bin2h/) with added functionality).
-* Compile the data from all the files into one binary archive file (like [tar](https://en.wikipedia.org/wiki/Tar_(computing)) or [qrc](https://doc.qt.io/qt-5/resources.html)) which you can then load from disk or append to the application executable and access at runtime. No external libraries are needed for this. It is currently tested under Linux only, but Windows and to some extent MacOS are plannend.
+* Compile the data from all the files into one binary archive file (like [tar](https://en.wikipedia.org/wiki/Tar_(computing)) or [qrc](https://doc.qt.io/qt-5/resources.html)) which you can then load from disk or append to the application executable and access at runtime. No external libraries are needed for this.
+* It is currently tested under Linux only, but Windows and to some extent MacOS are plannend.
 
 The main tools are [res2h](#res2h) which can convert files to .h/.cpp files or pack them into binary archives and [res2hdump](#res2hdump) which lets you view or unpack those binary archives.
 
@@ -166,7 +167,7 @@ res2hMapType res2hMap(mapTemp, mapTemp + sizeof mapTemp / sizeof mapTemp[0]);
 
 #### The command ```res2h ./data archive.bin -r -b``` 
 
-would find all files in the directory ./data and pack them into the binary archive test.bin. For reading archive files or embedded archives in your application include the files "res2hinterface.h/.cpp" resp. the class "Res2h". They provide all functions needed for reading resources from archives or from disk. You can find an example on how to use the functions in "res2hdump.cpp" / dumpArchive().
+would find all files in the directory ./data and pack them into the binary archive test.bin. For reading archive files or embedded archives in your application include the files "res2hinterface.h/.cpp" resp.# the class "Res2h". They provide all functions needed for reading resources from archives or from disk. You can find an example on how to use the functions in "res2hdump.cpp" / dumpArchive().
 
 ## res2hdump
 
@@ -176,7 +177,7 @@ res2hdump is a tool that lets you dump information and/or files from a binary re
 res2hdump ARCHIVE [OUTDIR] [OPTIONS]
 ```
 
-### Valid options
+### Valid OPTIONS
 
 **-f**: Recreate path structure, creating directories as needed.  
 **-i**: Display information about the archive and files, but don't extract anything.  
