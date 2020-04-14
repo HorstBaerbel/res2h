@@ -766,7 +766,8 @@ int main(int argc, const char *argv[])
                 std::cerr << "Found no files to convert" << std::endl;
                 return 1;
             }
-            fileList = generateOutputPaths(fileList, inFilePath, outFilePath, useC);
+            fileList = naiveSortByInPath(fileList);
+            fileList = generateOutputPaths(fileList, inFilePath, outFilePath, useC, beVerbose);
         }
         else
         {

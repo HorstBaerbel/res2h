@@ -78,6 +78,13 @@ std::vector<FileData> getFileData(const stdfs::path &inPath, const stdfs::path &
     return files;
 }
 
+std::vector<FileData> naiveSortByInPath(const std::vector<FileData> &files)
+{
+    std::vector<FileData> result = files;
+    std::sort(result.begin(), result.end(), [](const auto &pa, const auto &pb) { return pa.inPath < pb.inPath; });
+    return result;
+}
+
 std::vector<FileData> generateOutputPaths(const std::vector<FileData> &files, const stdfs::path &parentDir, const stdfs::path &outPath, bool useC, bool beVerbose)
 {
     std::vector<FileData> result = files;

@@ -12,16 +12,16 @@
 #include <string>
 #include <vector>
 
-static const Res2h::ArchiveInfo ReferenceArchive = {"/tmp/test.bin", 0, 2, 32, 32, 19485, 0xb858a65c};
+static const Res2h::ArchiveInfo ReferenceArchive = {"/tmp/test.bin", 0, 2, 32, 32, 19485, 0x5cc5a806};
 static const std::vector<Res2h::ResourceInfo> ReferenceResource = {
-    {":/ab.txt", {}, 7, 270, 0x6975ce2e},
-    {":/a.txt", {}, 4, 277, 0xcd236bc2},
-    {":/test1.png", {}, 13095, 281, 0x741b0dba},
-    {":/b.txt", {}, 3, 13376, 0xc4ce626c},
-    {":/test2.txt", {}, 591, 13379, 0x31c068ce},
-    {":/subdir/a.txt", {}, 4, 13970, 0xcd236bc2},
-    {":/subdir/test2.jpg", {}, 5459, 13974, 0x46d7bec9},
-    {":/subdir/subdir2/test3.txt", {}, 48, 19433, 0x6bd61659}
+    {":/a.txt", {}, 4, 270, 0xcd236bc2},
+    {":/ab.txt", {}, 7, 274, 0x6975ce2e},
+    {":/b.txt", {}, 3, 281, 0xc4ce626c},
+    {":/subdir/a.txt", {}, 4, 284, 0xcd236bc2},
+    {":/subdir/subdir2/test3.txt", {}, 48, 288, 0x6bd61659},
+    {":/subdir/test2.jpg", {}, 5459, 336, 0x46d7bec9},
+    {":/test1.png", {}, 13095, 5795, 0x741b0dba},
+    {":/test2.txt", {}, 591, 18890, 0x31c068ce}
 };
 
 bool test_archivecontent(const stdfs::path &dataDir, const stdfs::path &buildDir)
@@ -64,11 +64,10 @@ bool test_archivecontent(const stdfs::path &dataDir, const stdfs::path &buildDir
     std::vector<std::reference_wrapper<const Res2h::ResourceInfo>> resources;
     CHECK_NOTHROW(resources = res2h.resourceInfo())
     CHECK_EQUAL(resources.size(), ReferenceResource.size())
-    for (const auto & resRef : resources)
+    for (decltype(resources.size()) i = 0; i < resources.size(); ++i)
     {
-        // try to find file in reference. we don't care about the order of the files
-        auto & resource = resRef.get();
-        if (std::find(ReferenceResource.cbegin(), ReferenceResource.cend(), resource) == ReferenceResource.cend())
+        auto resource = resources.at(i).get();
+        if (resource != ReferenceResource.at(i))
         {
             std::cout << "File \"" << resource.filePath << "\" not found" << std::endl;
             return false;
@@ -80,5 +79,4 @@ bool test_archivecontent(const stdfs::path &dataDir, const stdfs::path &buildDir
 START_SUITE("Res2hinterface test")
 stdfs::path buildDir = stdfs::current_path();
 RUN_TEST("Check archive content", test_archivecontent(buildDir / "../../test/data/", buildDir))
-
 END_SUITE

@@ -64,4 +64,4 @@ set(TEST_LIBRARIES
 AddTest(checksum)
 AddTest(fshelpers)
 AddTest(res2h)
-#AddTest(res2hinterface)
+AddTest(res2hinterface)

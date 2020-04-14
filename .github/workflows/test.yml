@@ -22,4 +22,6 @@ jobs:
       run: |
         cd build
         make
-        ctest --debug --output-on-failure
+        ctest --output-on-failure
+# Can't seem to pass extra info to "make test", thus use ctest directly
+# Use "ctest --debug --extra-verbose" to get full debug output

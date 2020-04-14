@@ -25,11 +25,16 @@ struct FileData
 /// @return Returns information about files on disk in inPath.
 std::vector<FileData> getFileData(const stdfs::path &inPath, const stdfs::path &parentDir, bool recurse, bool beVerbose = false);
 
+/// @brief Sort all FileData entries lexcographically by inPath using the path as long string.
+/// @param files Input files to sort.
+/// @return Return sorted files.
+std::vector<FileData> naiveSortByInPath(const std::vector<FileData> &files);
+
 /// @brief Fill the FileData structure with information about file output paths.
 /// @param files Input files to add information to.
 /// @param parentDir Parent directory for files.
 /// @param outPath Path output files are being written to.
 /// @param useC Generate output file names with ".c" extension instead of ".cpp".
 /// @param beVerbose Output diagnoctic information to stdout.
-/// @return Return updated files with output information.
+/// @return Return files updated with output information.
 std::vector<FileData> generateOutputPaths(const std::vector<FileData> &files, const stdfs::path &parentDir, const stdfs::path &outPath, bool useC, bool beVerbose = false);
