@@ -1,17 +1,10 @@
 #include "checksum.h"
-#include "fshelpers.h"
 #include "res2hinterface.h"
+#include "stdfs.h"
+#include "stdfshelpers.h"
 
 #include <fstream>
 #include <iostream>
-
-#if defined(__GNUC__) || defined(__clang__)
-#include <experimental/filesystem>
-namespace stdfs = std::experimental::filesystem;
-#elif defined(_MSC_VER)
-#include <filesystem>
-namespace stdfs = std::tr2::sys;
-#endif
 
 static bool beVerbose = false;
 static bool useFullPaths = false;

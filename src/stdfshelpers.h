@@ -1,12 +1,6 @@
 #pragma once
 
-#if defined(__GNUC__) || defined(__clang__)
-#include <experimental/filesystem>
-namespace stdfs = std::experimental::filesystem;
-#elif defined(_MSC_VER)
-#include <filesystem>
-namespace stdfs = std::tr2::sys;
-#endif
+#include "stdfs.h"
 
 /// @brief Uncomplete a path similar to relative (https://en.cppreference.com/w/cpp/filesystem/relative)
 //  e.g. naiveRelative("/foo/new.file", "/foo/bar/") returns "../new.file".

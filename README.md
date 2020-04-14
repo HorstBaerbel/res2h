@@ -254,8 +254,10 @@ Obviously with a 32bit archive you're limited to ~4GB for the whole binary file 
 * Unicode support.
 * Save space on .c / .cpp files by outputting 32bit or even 64bit hex strings.
 * Re-use compile results of "Build" action in "Unit tests" and "Clang-tidy" action to save time.
+* Use CRC instead of Fletcher.
 * Add optional resource compression.
 * Parallel processing of input files.
+* Support updating archives.
 * Option to only save hash to archives to save space.
 * More compact binary format.
 

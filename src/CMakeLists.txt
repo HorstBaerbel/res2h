@@ -53,7 +53,8 @@ set(R2H_HEADERS
 set(R2H_SOURCES
 	${PROJECT_SOURCE_DIR}/res2h.cpp
 	${PROJECT_SOURCE_DIR}/checksum.cpp
-	${PROJECT_SOURCE_DIR}/fshelpers.cpp
+	${PROJECT_SOURCE_DIR}/stdfshelpers.cpp
+	${PROJECT_SOURCE_DIR}/res2hhelpers.cpp
 	${PROJECT_SOURCE_DIR}/syshelpers.cpp
 )
 
@@ -67,7 +68,8 @@ set(R2H_DUMP_SOURCES
 	${PROJECT_SOURCE_DIR}/res2hinterface.cpp
 	${PROJECT_SOURCE_DIR}/res2hdump.cpp
 	${PROJECT_SOURCE_DIR}/checksum.cpp
-	${PROJECT_SOURCE_DIR}/fshelpers.cpp
+	${PROJECT_SOURCE_DIR}/stdfshelpers.cpp
+	${PROJECT_SOURCE_DIR}/res2hhelpers.cpp
 	${PROJECT_SOURCE_DIR}/syshelpers.cpp
 )
 

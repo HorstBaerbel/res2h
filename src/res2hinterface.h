@@ -22,7 +22,7 @@ class Res2hException final : public std::runtime_error
 // -----------------------------------------------------------------------------
 
 /// @brief Main interface class to read files from disk or from 32/64Bit res2h archives.
-/// Use @sa loadFile() to load a file from disk. If the file is in a res2h archive,
+/// Use @sa loadFile() to load a file from disk if the file is in a res2h archive,
 /// use @sa loadArchive() before. Resources will be cached in memory until you call releaseCache(),
 /// which will release all data. You can have multiple archives loaded at the same time.
 /// Example:
@@ -40,6 +40,11 @@ class Res2h
         uint64_t dataSize = 0; // !<Raw content size.
         uint64_t dataOffset = 0; // !<Raw content offset in binary res2h archive if any (Start of data = archive.offsetInFile + entry.dataOffset).
         uint64_t checksum = 0; // !<Fletcher-32/64 checksum of raw content.
+
+        /// @brief Compare a and b for equality.
+        friend bool operator==(const ResourceInfo &a, const ResourceInfo &b);
+        /// @brief Compare a and b for inequality.
+        friend bool operator!=(const ResourceInfo &a, const ResourceInfo &b);
     };
 
     struct ArchiveInfo
@@ -51,6 +56,11 @@ class Res2h
         uint8_t bits = 0; // !<Archive bit depth (32/64).
         uint64_t size = 0; // !<Overall size of archive data.
         uint64_t checksum = 0; // !<Fletcher-32/64 archive checksum.
+
+        /// @brief Compare a and b for equality.
+        friend bool operator==(const ArchiveInfo &a, const ArchiveInfo &b);
+        /// @brief Compare a and b for inequality.
+        friend bool operator!=(const ArchiveInfo &a, const ArchiveInfo &b);
     };
 
     /// @brief Return an instance of the singleton Res2h object.
@@ -80,7 +90,7 @@ class Res2h
 
     /// @brief Load resource / file content. Can be either a file on disk or a file in a binary archive.
     /// @param filePath Path to the file. If it start with ":/" it is considered to be in a binary archive.
-    /// @param keepInCache Optional. Pass true to keep the resource in memory if you need it more than once. Memory archive data is never cached, because it is already in memory.
+    /// @param keepInCache Optional. Pass true to keep the resource in memory if you need it more than once.
     /// @param checkChecksum Optional. Pass true to check the calculated checksum of the data against the checksum stored in the archive.
     /// @return Returns a struct containing the data or throws an exception if it fails to do so.
     /// @note When loading data from a binary archive, you must load the archive with @sa loadArchive() before.

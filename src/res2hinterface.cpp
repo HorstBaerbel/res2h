@@ -9,6 +9,26 @@ Res2hException::Res2hException(const char *errorString) noexcept
 {
 }
 
+bool operator==(const Res2h::ResourceInfo &a, const Res2h::ResourceInfo &b)
+{
+    return a.dataSize == b.dataSize && a.dataOffset == b.dataOffset && a.checksum == b.checksum && a.filePath == b.filePath && a.data.size() == b.data.size() && a.data == b.data;
+}
+
+bool operator!=(const Res2h::ResourceInfo &a, const Res2h::ResourceInfo &b)
+{
+    return !(a == b);
+}
+
+bool operator==(const Res2h::ArchiveInfo &a, const Res2h::ArchiveInfo &b)
+{
+    return a.offsetInFile == b.offsetInFile && a.fileVersion == b.fileVersion && a.formatFlags == b.formatFlags && a.bits == b.bits && a.size == b.size && a.checksum == b.checksum && a.filePath == b.filePath;
+}
+
+bool operator!=(const Res2h::ArchiveInfo &a, const Res2h::ArchiveInfo &b)
+{
+    return !(a == b);
+}
+
 Res2h &Res2h::instance()
 {
     static Res2h instance;

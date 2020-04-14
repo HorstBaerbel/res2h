@@ -32,6 +32,7 @@ Checks: "*, \
   -llvm-header-guard, \
   -modernize-use-trailing-return-type, \
   -misc-definitions-in-headers, \
+  -misc-unused-alias-decls, \
   -modernize-concat-nested-namespaces, \
   -modernize-raw-string-literal, \
   -readability-magic-numbers"
