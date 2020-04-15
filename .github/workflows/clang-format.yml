@@ -14,9 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run clang-format
-      uses: DoozyX/clang-format-lint-action@v0.5
+      uses: HorstBaerbel/action-clang-format@master
       with:
-        source: './src'
-        exclude: './build'
-        extensions: 'h,H,hh,hpp,hxx,h++,c,C,cc,cpp,cxx,c++'
-        clangFormatVersion: 9
+        sourcedir: '.'
+        excludedir: './build'
