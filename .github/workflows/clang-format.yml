@@ -14,9 +14,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run clang-format
-      uses: HorstBaerbel/action-clang-format@master
+      uses: HorstBaerbel/action-clang-format@1.0
       with:
-        sourcedir: '.'
+        scandir: '.'
         excludedirs: 'build'
         extensions: 'h,cpp'
         style: 'file'
