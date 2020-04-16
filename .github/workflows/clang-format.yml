@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run clang-format
-      uses: HorstBaerbel/action-clang-format@1.0
+      uses: HorstBaerbel/action-clang-format@1.1
       with:
         scandir: '.'
         excludedirs: 'build'
