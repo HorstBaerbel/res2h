@@ -13,16 +13,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Install clang-tidy
-      run: |
-          sudo apt-get install -y clang-tidy-9
-          sudo update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-9 100
-    - name: Run cmake
-      run: cmake -S . -B build
     - name: Run clang-tidy
-      run: python3 ./run-clang-tidy.py
-# The following step seems to crash sometimes due to unkown reasons:
-#    - name: Set shell options and run clang-tidy
-#      run: |
-#          shopt -s globstar extglob failglob
-#          ls **/*.@(h|H|hh|hpp|hxx|h++|c|C|cc|cpp|cxx|c++) | grep -v build | tr "\n" " " | xargs clang-tidy -p=build
+      uses: HorstBaerbel/action-clang-tidy@master
+      with:
+        scandir: '.'
+        builddir: 'build'
+        excludedirs: ''
+        extensions: 'h,cpp'
