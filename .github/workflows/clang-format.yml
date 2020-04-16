@@ -17,4 +17,6 @@ jobs:
       uses: HorstBaerbel/action-clang-format@master
       with:
         sourcedir: '.'
-        excludedir: './build'
+        excludedirs: 'build'
+        extensions: 'h,cpp'
+        style: 'file'
