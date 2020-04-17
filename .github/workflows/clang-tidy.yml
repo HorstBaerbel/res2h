@@ -14,9 +14,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run clang-tidy
-      uses: HorstBaerbel/action-clang-tidy@master
+      uses: HorstBaerbel/action-clang-tidy@1.0
       with:
         scandir: '.'
         builddir: 'build'
         excludedirs: ''
         extensions: 'h,cpp'
+        cmakeoptions: ''
