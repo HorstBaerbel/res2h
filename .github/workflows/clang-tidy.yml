@@ -1,4 +1,4 @@
-# Install and run clang-tidy
+# Install and run clang-tidy 
 name: Clang-tidy
 
 on:
