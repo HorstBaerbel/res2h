@@ -13,15 +13,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Run cmake
-      run: |
-        mkdir build
-        cd build
-        cmake --config Release ..
-    - name: Build and run tests
-      run: |
-        cd build
-        make
-        ctest --output-on-failure
-# Can't seem to pass extra info to "make test", thus use ctest directly
-# Use "ctest --debug --extra-verbose" to get full debug output
+    - name: Run unit tests
+      uses: HorstBaerbel/action-ctest@master
+      # These are optional (defaults displayed)
+      with:
+        sourcedir: '.'
+        builddir: 'build'
+        cmakeoptions: '--config Release'
+        ctestoptions: ''
