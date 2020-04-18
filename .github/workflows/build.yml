@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build
-      uses: HorstBaerbel/action-cmake@master
+      uses: HorstBaerbel/action-cmake@1.0
       with:
         sourcedir: '.'
         builddir: 'build'

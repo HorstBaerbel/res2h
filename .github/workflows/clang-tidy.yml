@@ -8,7 +8,7 @@ on:
     branches: [ master ]
 
 jobs:
-  install-and-run:
+  check-formatting:
     runs-on: ubuntu-latest
 
     steps:

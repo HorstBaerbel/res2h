@@ -8,7 +8,7 @@ on:
     branches: [ master ]
 
 jobs:
-  install-and-run:
+  check-source:
     runs-on: ubuntu-latest
 
     steps:
