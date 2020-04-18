@@ -13,7 +13,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: cmake
-      run: cmake .
-    - name: make
-      run: make
+    - name: Build
+      uses: HorstBaerbel/action-cmake@1.0
+      with:
+        sourcedir: '.'
+        builddir: 'build'
+        cmakeoptions: ''
