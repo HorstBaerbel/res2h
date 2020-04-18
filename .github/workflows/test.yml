@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run unit tests
-      uses: HorstBaerbel/action-ctest@master
+      uses: HorstBaerbel/action-ctest@1.0
       # These are optional (defaults displayed)
       with:
         sourcedir: '.'
